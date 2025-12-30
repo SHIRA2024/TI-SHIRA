@@ -1,0 +1,81 @@
+<div class="marketplace-container">
+  <div class="marketplace-header">
+    <div class="header-left">
+      <h2>App Marketplace</h2>
+      <p class="subtitle">Discover and manage internal tools for the Connectivity team</p>
+    </div>
+    <div class="header-right">
+      <div class="view-controls">
+        <button 
+          class="view-btn" 
+          [class.active]="viewMode() === 'grid'"
+          (click)="toggleViewMode()"
+          title="Grid View">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+        </button>
+        <button 
+          class="view-btn" 
+          [class.active]="viewMode() === 'list'"
+          (click)="toggleViewMode()"
+          title="List View">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="marketplace-filters">
+    <div class="filter-buttons">
+      <button 
+        class="filter-btn" 
+        [class.active]="filterStatus() === 'all'"
+        (click)="setFilterStatus('all')">
+        All Apps ({{ apps().length }})
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterStatus() === 'installed'"
+        (click)="setFilterStatus('installed')">
+        Installed ({{ installedCount }})
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterStatus() === 'update-available'"
+        (click)="setFilterStatus('update-available')">
+        Updates Available ({{ updateAvailableCount }})
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterStatus() === 'available'"
+        (click)="setFilterStatus('available')">
+        Available
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading apps...</p>
+    </div>
+  } @else if (filteredApps.length === 0) {
+    <div class="empty-state">
+      <p>No apps found matching your filter.</p>
+    </div>
+  } @else {
+    <div class="apps-container" [class.grid-view]="viewMode() === 'grid'" [class.list-view]="viewMode() === 'list'">
+      @for (app of filteredApps; track app.id) {
+        <app-card 
+          [app]="app"
+          (onInstall)="onInstall($event)"
+          (onUninstall)="onUninstall($event)"
+          (onUpdate)="onUpdate($event)" />
+      }
+    </div>
+  }
+</div>
+

@@ -1,0 +1,27 @@
+<div class="installed-container">
+  <div class="installed-header">
+    <h2>Installed Apps</h2>
+    <p class="subtitle">Manage your installed applications</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading apps...</p>
+    </div>
+  } @else if (apps().length === 0) {
+    <div class="empty-state">
+      <p>No apps installed yet. Visit the marketplace to install apps.</p>
+    </div>
+  } @else {
+    <div class="apps-container">
+      @for (app of apps(); track app.id) {
+        <app-card 
+          [app]="app"
+          (onUninstall)="onUninstall($event)"
+          (onUpdate)="onUpdate($event)" />
+      }
+    </div>
+  }
+</div>
+

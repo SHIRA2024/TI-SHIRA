@@ -1,0 +1,20 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <div class="header-content">
+      <h1 class="dashboard-title">{{ title }}</h1>
+      <nav class="dashboard-nav">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+          Marketplace
+        </a>
+        <a routerLink="/installed" routerLinkActive="active">
+          Installed Apps
+        </a>
+      </nav>
+    </div>
+  </header>
+  
+  <main class="dashboard-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
