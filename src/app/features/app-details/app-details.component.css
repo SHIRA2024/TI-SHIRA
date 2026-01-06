@@ -7,7 +7,7 @@
 }
 
 .back-button {
-  color: #3b82f6;
+  color: #007c8c;
   text-decoration: none;
   font-weight: 500;
   display: inline-flex;
@@ -16,7 +16,7 @@
 }
 
 .back-button:hover {
-  color: #2563eb;
+  color: #0bc;
 }
 
 .app-details-header {
@@ -31,7 +31,7 @@
   width: 5rem;
   height: 5rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c00, #900 100%); /*change to "primary/secondary colors"*/
   display: flex;
   align-items: center;
   justify-content: center;

@@ -56,7 +56,7 @@
 }
 
 .view-btn.active {
-  background-color: #3b82f6;
+  background-color: #007c8c;
   color: white;
 }
 
@@ -88,9 +88,8 @@
 }
 
 .filter-btn.active {
-  background-color: #3b82f6;
+  background-color: #007c8c;
   color: white;
-  border-color: #3b82f6;
 }
 
 .apps-container {
