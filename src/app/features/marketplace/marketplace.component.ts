@@ -27,9 +27,10 @@ import { AppCardComponent } from '../../shared/components/app-card/app-card.comp
  * @component
  * @standalone This is a standalone component (Angular 17+)
  */
+type statusType = 'all'|'installed'|'update-available'|'available';
 @Component({
   selector: 'app-marketplace',
-  standalone: true,
+  // standalone: true,
   imports: [CommonModule, AppCardComponent],
   templateUrl: './marketplace.component.html',
   styleUrl: './marketplace.component.css'
@@ -67,7 +68,8 @@ export class MarketplaceComponent implements OnInit {
    * Values: 'all', 'installed', 'update-available', 'available'
    * Used to filter which apps are displayed.
    */
-  filterStatus = signal<string>('all');
+ 
+  filterStatus = signal<statusType>('all');
 
   /**
    * Constructor
@@ -195,7 +197,7 @@ export class MarketplaceComponent implements OnInit {
    * 
    * @param {string} status - The status to filter by ('all', 'installed', 'update-available', 'available')
    */
-  setFilterStatus(status: string): void {
+  setFilterStatus(status:statusType): void {
     this.filterStatus.set(status);
   }
 

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './features/dashboard/dashboard.component';
+import { NavbarComponent } from './features/navbar/navbar.component';
 import { MarketplaceComponent } from './features/marketplace/marketplace.component';
 import { InstalledComponent } from './features/installed/installed.component';
 import { AppDetailsComponent } from './features/app-details/app-details.component';
@@ -7,7 +7,7 @@ import { AppDetailsComponent } from './features/app-details/app-details.componen
 export const routes: Routes = [
   {
     path: '',
-    component: DashboardComponent,
+    component: NavbarComponent,
     children: [
       {
         path: '',
@@ -20,6 +20,7 @@ export const routes: Routes = [
       {
         path: 'app/:id',
         component: AppDetailsComponent
+
       }
     ]
   }

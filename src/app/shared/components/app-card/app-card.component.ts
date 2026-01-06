@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, Input } from '@angular/core';
 import { App, AppStatus } from '../../../models/app.model';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';

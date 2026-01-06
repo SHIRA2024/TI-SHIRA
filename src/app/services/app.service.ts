@@ -200,7 +200,7 @@ export class AppService {
    * });
    * ```
    */
-  installApp(id: string): Observable<App> {
+  installApp(id: string): Observable<void> {
     return new Observable(observer => {
       // Simulate installation process delay (500ms)
       setTimeout(() => {
@@ -214,7 +214,7 @@ export class AppService {
           };
           this.updateAppInArray(updatedApp);
           this.saveToLocalStorage();
-          observer.next(updatedApp);
+          observer.next();
           observer.complete();
         } else {
           observer.error(new Error('App not found'));
@@ -293,7 +293,7 @@ export class AppService {
    * });
    * ```
    */
-  updateApp(id: string): Observable<App> {
+  updateApp(id: string): Observable<void> {
     return new Observable(observer => {
       // Simulate update process delay (600ms - typically longer than install)
       setTimeout(() => {
@@ -307,7 +307,7 @@ export class AppService {
           };
           this.updateAppInArray(updatedApp);
           this.saveToLocalStorage();
-          observer.next(updatedApp);
+          observer.next();
           observer.complete();
         } else {
           observer.error(new Error('App update not available'));
@@ -351,6 +351,7 @@ export class AppService {
     const index = currentApps.findIndex(a => a.id === updatedApp.id);
     if (index !== -1) {
       // Immutable update: create new array with updated app
+      // todo: change from shallow copy to deep copy
       const newApps = [...currentApps];
       newApps[index] = updatedApp;
       this.apps.set(newApps);

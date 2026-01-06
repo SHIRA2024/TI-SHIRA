@@ -3,14 +3,14 @@ import { RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 /**
- * Dashboard Component
+ * Navbar Component
  * 
- * Main layout component that provides the application shell with navigation and routing.
+ * Main layout/navigation component that provides the application shell with navigation and routing.
  * This component serves as the parent container for all feature views (marketplace,
  * installed apps, app details).
  * 
  * Architecture Role:
- * - Acts as the root layout component for authenticated/logged-in users
+ * - Acts as the root layout/navbar component for authenticated/logged-in users
  * - Provides consistent navigation header across all views
  * - Contains router-outlet for child route components
  * - Handles top-level navigation between main sections
@@ -23,13 +23,13 @@ import { CommonModule } from '@angular/common';
  * @standalone This is a standalone component (Angular 17+)
  */
 @Component({
-  selector: 'app-dashboard',
+  selector: 'app-navbar',
   standalone: true,
   imports: [CommonModule, RouterModule, RouterOutlet],
-  templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css'
+  templateUrl: './navbar.component.html',
+  styleUrl: './navbar.component.css'
 })
-export class DashboardComponent {
+export class NavbarComponent {
   /**
    * Application Title
    * 

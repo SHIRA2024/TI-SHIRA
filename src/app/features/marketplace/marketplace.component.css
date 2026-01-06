@@ -1,7 +1,6 @@
 .marketplace-container {
   width: 100%;
 }
-
 .marketplace-header {
   display: flex;
   justify-content: space-between;
@@ -146,4 +145,6 @@
     grid-template-columns: 1fr;
   }
 }
+
+
 

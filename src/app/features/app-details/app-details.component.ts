@@ -1,9 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, NgModule, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AppService } from '../../services/app.service';
 import { App, AppStatus } from '../../models/app.model';
 import { AppStatusBadgeComponent } from '../../shared/components/app-status-badge/app-status-badge.component';
+import { NgModel } from '@angular/forms';
 
 /**
  * App Details Component
@@ -32,8 +33,9 @@ import { AppStatusBadgeComponent } from '../../shared/components/app-status-badg
  * @component
  * @standalone This is a standalone component (Angular 17+)
  */
+
 @Component({
-  selector: 'app-app-details',
+  selector: 'app-details',
   standalone: true,
   imports: [CommonModule, RouterModule, AppStatusBadgeComponent],
   templateUrl: './app-details.component.html',
