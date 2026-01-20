@@ -7,7 +7,7 @@
 }
 
 .back-button {
-  color: #007c8c;
+  color: var(--color-accent-medium);
   text-decoration: none;
   font-weight: 500;
   display: inline-flex;
@@ -16,7 +16,7 @@
 }
 
 .back-button:hover {
-  color: #0bc;
+  color: var(--color-accent-light);
 }
 
 .app-details-header {

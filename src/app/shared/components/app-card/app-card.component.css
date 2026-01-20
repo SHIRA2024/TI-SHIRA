@@ -99,16 +99,16 @@
 }
 
 .btn-primary {
-  background-color: #007c8c;
+  background-color: var(--color-accent-medium);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #0bc;
+  background-color: var(--color-accent-light);
 }
 
 .btn-secondary {
-  background-color: #aaa;
+  background-color: var(--color-gray);
   color: white;
 }
 
@@ -117,20 +117,20 @@
 }
 
 .btn-warning {
-  background-color: #CC0000;
+  background-color: var(--color-primary);
   color: white;
 }
 
 .btn-warning:hover {
-  background-color: #990000;
+  background-color: var(--color-secondary);
 }
 
 .btn-danger {
-  background-color: #156;
+  background-color: var(--color-accent-dark);
   color: white;
 }
 
 .btn-danger:hover {
-  background-color: #000;
+  background-color: var(--color-black);
 }
 

@@ -9,17 +9,17 @@
 }
 
 .badge-installed {
-  background-color:#000;
+  background-color: var(--color-black);
   color: white;
 }
 
 .badge-available {
-  background-color: #0bc;
+  background-color: var(--color-accent-light);
   color: white;
 }
 
 .badge-update {
-  background-color: #CC0000;
+  background-color: var(--color-primary);
   color: white;
 }
 

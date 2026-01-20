@@ -2,12 +2,12 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #e0e0e0;
+  background-color: var(--color-tertiary);
 }
 
 .navbar-header {
-  background: #CC0000;
-  border-bottom: 1px solid #990000;
+  background: var(--color-primary);
+  border-bottom: 1px solid var(--color-secondary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
@@ -34,7 +34,7 @@
 }
 
 .navbar-nav a {
-  color: #FFFFFF;
+  color: var(--color-white);
   text-decoration: none;
   font-weight: 500;
   padding: 0.5rem 0;
@@ -43,12 +43,12 @@
 }
 
 .navbar-nav a:hover {
-  color: #E0E0E0;
+  color: var(--color-tertiary);
 }
 
 .navbar-nav a.active {
-  color: #FFFFFF;
-  border-bottom-color: #FFFFFF;
+  color: var(--color-white);
+  border-bottom-color: var(--color-white);
 }
 
 .navbar-main {
