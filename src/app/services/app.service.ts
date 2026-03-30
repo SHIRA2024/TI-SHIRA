@@ -97,6 +97,30 @@ export class AppService {
       author: 'Platform Team',
       releaseDate: '2024-01-12'
     }
+
+    ,
+{
+  id: '7',
+  name: 'Cache Manager',
+  version: '2.4.0',
+  description: 'Manage distributed cache settings and monitor cache health.',
+  businessUnit: 'Infrastructure',
+  status: AppStatus.Available,
+  author: 'Infrastructure Team',
+  releaseDate: '2024-01-22'
+},
+
+{
+  id: '8',
+  name: 'Release Dashboard',
+  version: '1.9.2',
+  description: 'Track deployments, release readiness, and version rollout status.',
+  businessUnit: 'DevOps',
+  status: AppStatus.Installed,
+  installedVersion: '1.9.2',
+  author: 'Release Team',
+  releaseDate: '2024-01-25'
+}
   ];
 
   /**

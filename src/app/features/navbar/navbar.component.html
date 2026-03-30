@@ -12,6 +12,10 @@
       </nav>
     </div>
   </header>
+
+  <div class="toast" *ngIf="toastMessage">
+    {{ toastMessage }}
+  </div>
   
   <main class="navbar-main">
     <router-outlet></router-outlet>

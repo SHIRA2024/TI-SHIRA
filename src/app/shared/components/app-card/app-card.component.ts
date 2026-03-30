@@ -166,5 +166,13 @@ export class AppCardComponent {
   handleUpdate(): void {
     this.onUpdate.emit(this.app().id);
   }
+handleRun(): void {
+  const event = new CustomEvent('show-toast', {
+    detail: `Running app: ${this.app().name}`
+  });
+
+  window.dispatchEvent(event);
+}
+
 }
 

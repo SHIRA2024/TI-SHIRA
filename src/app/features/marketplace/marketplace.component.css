@@ -94,11 +94,11 @@
 
 .apps-container {
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .apps-container.grid-view {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .apps-container.list-view {
