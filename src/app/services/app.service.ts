@@ -92,7 +92,7 @@ export class AppService {
       version: '1.8.0',
       description: 'Application performance profiling and bottleneck identification.',
       businessUnit: 'Platform',
-      status: AppStatus.Installed,
+      status: AppStatus.UpdateAvailable,
       installedVersion: '1.8.0',
       author: 'Platform Team',
       releaseDate: '2024-01-12'
@@ -143,19 +143,28 @@ export class AppService {
    * This simulates persistence across page refreshes. In production, this would
    * typically fetch initial data from an API endpoint.
    */
-  constructor() {
-    // Load apps from localStorage if available (persistence simulation)
-    // This allows the app state to persist across browser sessions
-    const savedApps = localStorage.getItem('connectivity-toolbox-apps');
-    if (savedApps) {
-      try {
-        this.apps.set(JSON.parse(savedApps));
-      } catch (e) {
-        // If localStorage data is corrupted, fall back to mock data
-        console.error('Failed to load apps from localStorage', e);
+    constructor() {
+      const savedApps = localStorage.getItem('connectivity-toolbox-apps');
+
+      if (savedApps) {
+        try {
+          const parsed: App[] = JSON.parse(savedApps);
+
+          const mergedApps = this.mockApps.map(mockApp => {
+            const savedApp = parsed.find(app => app.id === mockApp.id);
+            return savedApp ? { ...mockApp, ...savedApp } : mockApp;
+          });
+
+          this.apps.set(mergedApps);
+          this.saveToLocalStorage();
+        } catch (e) {
+          console.error('Failed to load apps from localStorage', e);
+          this.apps.set(this.mockApps);
+        }
+      } else {
+        this.apps.set(this.mockApps);
       }
     }
-  }
 
   /**
    * Get All Applications
