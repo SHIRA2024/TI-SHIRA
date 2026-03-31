@@ -32,6 +32,8 @@
   color: white;
   font-weight: bold;
   font-size: 1.3rem;
+  cursor: default;
+  user-select: none;
 }
 .icon-placeholder {
   display: block;
@@ -154,7 +156,7 @@
   gap: 1rem;
 }
 
-/* שמאל: אייקון + סטטוס */
+
 :host-context(.list-view) .app-card-header {
   display: flex;
   align-items: center;
@@ -171,14 +173,12 @@
   flex-shrink: 0;
 }
 
-/* לסטטוס רוחב קבוע כדי שלא ידחוף את הטקסט */
 :host-context(.list-view) app-status-badge {
   display: inline-flex;
   min-width: 130px;
   flex-shrink: 0;
 }
 
-/* אמצע: טקסט */
 :host-context(.list-view) .app-card-body {
   flex: 1;
   min-width: 0;
@@ -205,7 +205,6 @@
   margin-top: 0.15rem;
 }
 
-/* ימין: פעולות */
 :host-context(.list-view) .app-card-footer {
   display: flex;
   flex-direction: row;
@@ -243,11 +242,20 @@
 }
 
 .arrow {
-  font-size: 11px; /* קטן יותר */
-  opacity: 0.8; /* קצת יותר עדין */
+  font-size: 11px; 
+  opacity: 0.8; 
   transition: transform 0.2s ease;
 }
 
 .details-link:hover .arrow {
   transform: translateX(3px);
+}
+
+.app-name,
+.app-description,
+.app-meta,
+.header-left h2,
+.subtitle {
+  user-select: none;
+  cursor: default;
 }

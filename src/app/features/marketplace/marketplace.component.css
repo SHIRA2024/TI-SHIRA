@@ -7,6 +7,8 @@
   align-items: flex-start;
   margin-bottom: 2rem;
   gap: 2rem;
+  cursor: default;
+  user-select: none;
 }
 
 .header-left h2 {
@@ -14,6 +16,8 @@
   font-weight: 700;
   color: #111827;
   margin: 0 0 0.5rem 0;
+  cursor: default;
+  user-select: none;
 }
 
 .subtitle {
