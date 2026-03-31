@@ -31,7 +31,7 @@
           @if (app()!.installedVersion && app()!.installedVersion !== app()!.version) {
             <span class="installed-version">(Installed: {{ app()!.installedVersion }})</span>
           }
-          • {{ app()!.businessUnit }}
+        
         </p>
       </div>
     </div>
@@ -46,22 +46,9 @@
         <section class="app-section">
           <h2>Details</h2>
           <dl class="app-details-list">
-            @if (app()!.author) {
-              <div class="detail-item">
-                <dt>Author</dt>
-                <dd>{{ app()!.author }}</dd>
-              </div>
-            }
-            @if (app()!.releaseDate) {
-              <div class="detail-item">
-                <dt>Release Date</dt>
-                <dd>{{ app()!.releaseDate }}</dd>
-              </div>
-            }
-            <div class="detail-item">
-              <dt>Business Unit</dt>
-              <dd>{{ app()!.businessUnit }}</dd>
-            </div>
+        
+           
+        
             <div class="detail-item">
               <dt>Current Version</dt>
               <dd>{{ app()!.version }}</dd>

@@ -28,27 +28,24 @@ export enum AppStatus {
  * @interface App
  * @property {string} id - Unique identifier for the app (required)
  * @property {string} name - Display name of the application (required)
- * @property {string} version - Current/latest version of the app (required)
  * @property {string} description - Human-readable description of what the app does (required)
- * @property {string} businessUnit - The team or department that owns/maintains this app (required)
+ * @property {string} version - Current/latest version of the app (required)
  * @property {AppStatus} status - Current installation status of the app (required)
- * @property {string} [icon] - Optional URL or path to app icon/logo
- * @property {string} [author] - Optional name of the team or person who created the app
- * @property {string} [releaseDate] - Optional ISO date string when the app was released
  * @property {string} [installedVersion] - Optional version string of the currently installed version
  *                                        (only present when app is installed or has update available)
+ * @property {string} [icon] - Optional URL or path to app icon/logo
  */
 export interface App {
   id: string;
   name: string;
-  version: string;
   description: string;
-  businessUnit: string;
+   /*versions: string[]; */
+  version: string;
   status: AppStatus;
-  icon?: string;
-  author?: string;
-  releaseDate?: string;
+ /* supportedOS: string[];*/
   installedVersion?: string;
+  icon?: string;
+
 }
 
 

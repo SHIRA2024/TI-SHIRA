@@ -38,64 +38,47 @@ export class AppService {
       name: 'Network Analyzer',
       version: '2.1.0',
       description: 'Advanced network analysis tool for troubleshooting connectivity issues.',
-      businessUnit: 'Infrastructure',
       status: AppStatus.Installed,
       installedVersion: '2.0.5',
-      author: 'Connectivity Team',
-      releaseDate: '2024-01-15'
     },
     {
       id: '2',
       name: 'API Gateway Manager',
       version: '1.5.2',
       description: 'Manage and monitor API gateway configurations and endpoints.',
-      businessUnit: 'Platform',
       status: AppStatus.Available,
-      author: 'Platform Team',
-      releaseDate: '2024-01-10'
     },
     {
       id: '3',
       name: 'Database Monitor',
       version: '3.0.0',
       description: 'Real-time database performance monitoring and query analysis.',
-      businessUnit: 'Data Engineering',
       status: AppStatus.UpdateAvailable,
       installedVersion: '2.9.1',
-      author: 'Data Team',
-      releaseDate: '2024-01-20'
+     
     },
     {
       id: '4',
       name: 'Log Aggregator',
       version: '1.2.3',
       description: 'Centralized log collection and analysis across all services.',
-      businessUnit: 'DevOps',
       status: AppStatus.Installed,
       installedVersion: '1.2.3',
-      author: 'DevOps Team',
-      releaseDate: '2024-01-05'
     },
     {
       id: '5',
       name: 'Security Scanner',
       version: '2.3.1',
       description: 'Automated security vulnerability scanning and reporting.',
-      businessUnit: 'Security',
       status: AppStatus.Available,
-      author: 'Security Team',
-      releaseDate: '2024-01-18'
     },
     {
       id: '6',
       name: 'Performance Profiler',
       version: '1.8.0',
       description: 'Application performance profiling and bottleneck identification.',
-      businessUnit: 'Platform',
       status: AppStatus.Installed,
       installedVersion: '1.8.0',
-      author: 'Platform Team',
-      releaseDate: '2024-01-12'
     }
 
     ,
@@ -104,10 +87,7 @@ export class AppService {
   name: 'Cache Manager',
   version: '2.4.0',
   description: 'Manage distributed cache settings and monitor cache health.',
-  businessUnit: 'Infrastructure',
   status: AppStatus.Available,
-  author: 'Infrastructure Team',
-  releaseDate: '2024-01-22'
 },
 
 {
@@ -115,11 +95,8 @@ export class AppService {
   name: 'Release Dashboard',
   version: '1.9.2',
   description: 'Track deployments, release readiness, and version rollout status.',
-  businessUnit: 'DevOps',
   status: AppStatus.Installed,
   installedVersion: '1.9.2',
-  author: 'Release Team',
-  releaseDate: '2024-01-25'
 }
   ];
 
