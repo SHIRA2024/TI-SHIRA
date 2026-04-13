@@ -4,17 +4,14 @@
     <span class="icon-placeholder">{{ app().name.charAt(0) }}</span>
   </div>
 
-  <app-status-badge [status]="app().status" />
-</div>
-  
   <div class="app-card-body">
     <h3 class="app-name">{{ app().name }}</h3>
     <p class="app-description">{{ app().description }}</p>
     <div class="app-meta">
       <span class="app-version">v{{ app().version }}</span>
-  
     </div>
   </div>
+</div>
   
 <div class="app-card-footer">
   <a [routerLink]="['/app', app().id]" class="details-link">
