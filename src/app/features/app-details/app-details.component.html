@@ -41,11 +41,10 @@
 
         <dl>
  
-
-          <div class="detail-item">
+          <!-- <div class="detail-item">
             <dt>Current Version</dt>
             <dd>{{ app()!.version }}</dd>
-          </div>
+          </div> -->
 
           @if (app()!.installedVersion) {
             <div class="detail-item">
@@ -77,17 +76,56 @@
         }
 
         @if (canUpdate) {
-          <button
-            class="btn btn-warning btn-large"
-            [disabled]="actionInProgress() !== null"
-            (click)="handleUpdate()">
-            @if (actionInProgress() === 'update') {
+
+          @if (actionInProgress() === 'update') {
+            <button class="btn btn-warning btn-large" disabled>
               Updating...
-            } @else {
-              Update to v{{ app()!.version }}
-            }
-          </button>
+            </button>
+          } @else {
+
+            <div class="version-dropdown">
+
+              <div class="update-row">
+
+                <button 
+                  class="btn btn-warning btn-large update-btn"
+                  [disabled]="actionInProgress() !== null"
+                  (click)="handleUpdate()">
+                  Update to v{{ app()!.version }}
+                </button>
+
+                <button 
+                  class="arrow-btn"
+                  (click)="toggleVersions()">
+                  <span [class.open]="showVersions">▼</span>
+                </button>
+
+              </div>
+
+              @if (showVersions) {
+                <div class="dropdown-menu">
+                  @for (version of app()!.versions.slice(1, 30); track version) {
+                    <button
+                      class="btn btn-large dropdown-version-btn"
+                      [ngClass]="version === app()!.version ? 'btn-warning' : 'btn-downgrade'"
+                      type="button"
+                      (click)="handleVersionChange(version)">
+
+                      {{ version === app()!.version 
+                          ? 'Update to v' + version 
+                          : 'Downgrade to v' + version }}
+
+                    </button>
+                  }
+                </div>
+              }
+
+            </div>
+
+          }
+
         }
+
 
         @if (canUninstall) {
           <button

@@ -34,15 +34,19 @@ export enum AppStatus {
  * @property {string} [installedVersion] - Optional version string of the currently installed version
  *                                        (only present when app is installed or has update available)
  * @property {string} [icon] - Optional URL or path to app icon/logo
+ *  @property {string[]} versions - List of available versions for the app (latest first, up to 30 versions)
+ *  @property {string[]} supportedOS - List of operating systems supported by the app
  */
+
+
 export interface App {
   id: string;
   name: string;
   description: string;
-   /*versions: string[]; */
+  versions: string[]; 
   version: string;
   status: AppStatus;
- /* supportedOS: string[];*/
+  supportedOS: string[];
   installedVersion?: string;
   icon?: string;
 

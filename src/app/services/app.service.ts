@@ -40,6 +40,8 @@ export class AppService {
       description: 'Advanced network analysis tool for troubleshooting connectivity issues.',
       status: AppStatus.Installed,
       installedVersion: '2.0.5',
+      versions: ['2.1.0', '2.0.5', '2.0.0'],
+      supportedOS: ['Windows', 'macOS', 'Linux'],
     },
     {
       id: '2',
@@ -47,6 +49,9 @@ export class AppService {
       version: '1.5.2',
       description: 'Manage and monitor API gateway configurations and endpoints.',
       status: AppStatus.Available,
+      versions: ['1.5.2', '1.5.1', '1.5.0'],
+      supportedOS: ['Windows', 'macOS']
+      
     },
     {
       id: '3',
@@ -55,6 +60,8 @@ export class AppService {
       description: 'Real-time database performance monitoring and query analysis.',
       status: AppStatus.UpdateAvailable,
       installedVersion: '2.9.1',
+      versions: ['3.0.0', '2.9.1', '2.9.0'],
+      supportedOS: ['Linux']
      
     },
     {
@@ -64,6 +71,9 @@ export class AppService {
       description: 'Centralized log collection and analysis across all services.',
       status: AppStatus.Installed,
       installedVersion: '1.2.3',
+      versions: ['1.2.3', '1.2.2', '1.2.0'],
+      supportedOS: ['Windows', 'macOS', 'Linux']
+
     },
     {
       id: '5',
@@ -71,6 +81,8 @@ export class AppService {
       version: '2.3.1',
       description: 'Automated security vulnerability scanning and reporting.',
       status: AppStatus.Available,
+      versions: ['2.3.1', '2.3.0', '2.2.5'],
+      supportedOS: ['Windows', 'macOS', 'Linux']
     },
     {
       id: '6',
@@ -79,6 +91,8 @@ export class AppService {
       description: 'Application performance profiling and bottleneck identification.',
       status: AppStatus.UpdateAvailable,
       installedVersion: '1.8.0',
+      versions: ['1.8.0', '1.7.5', '1.7.0'],
+      supportedOS: ['Windows', 'macOS', 'Linux']
     }, 
     {
       id: '7',
@@ -86,6 +100,8 @@ export class AppService {
       version: '2.4.0',
       description: 'Manage distributed cache settings and monitor cache health.',
       status: AppStatus.Available,
+      versions: ['2.4.0', '2.3.5', '2.3.0'],
+      supportedOS: ['Windows', 'macOS', 'Linux']
     },
 
     {
@@ -95,7 +111,12 @@ export class AppService {
       description: 'Track deployments, release readiness, and version rollout status.',
       status: AppStatus.Installed,
       installedVersion: '1.9.2',
+      versions: ['1.9.2', '1.9.0', '1.8.5'],
+      supportedOS: ['Windows', 'macOS', 'Linux']
     }
+
+    
+
       ];
 
   /**
@@ -321,6 +342,39 @@ export class AppService {
           observer.error(new Error('App update not available'));
         }
       }, 600);
+    });
+  }
+
+  updateAppToVersion(id: string, targetVersion: string) {
+    return new Observable<void>(observer => {
+      setTimeout(() => {
+        const currentApps = this.apps();
+        const appIndex = currentApps.findIndex(app => app.id === id);
+
+        if (appIndex === -1) {
+          observer.error(new Error('App not found'));
+          return;
+        }
+
+        const app = currentApps[appIndex];
+
+        const updatedApp: App = {
+          ...app,
+          installedVersion: targetVersion,
+          status: targetVersion === app.version
+            ? AppStatus.Installed
+            : AppStatus.UpdateAvailable
+        };
+
+        const updatedApps = [...currentApps];
+        updatedApps[appIndex] = updatedApp;
+
+        this.apps.set(updatedApps);
+        this.saveToLocalStorage();
+
+        observer.next();
+        observer.complete();
+      }, 500);
     });
   }
 
