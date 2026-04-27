@@ -40,18 +40,26 @@ export class AppService {
       description: 'Advanced network analysis tool for troubleshooting connectivity issues.',
       status: AppStatus.Installed,
       installedVersion: '2.0.5',
-      versions: ['2.1.0', '2.0.5', '2.0.0'],
-      supportedOS: ['Windows', 'macOS', 'Linux'],
+      versionOrder: ['2.1.0', '2.0.5', '2.0.0'],
+      versions: {
+        '2.1.0': ['Windows', 'Linux'],
+        '2.0.5': ['Windows', 'Linux', 'macOS'],
+        '2.0.0': ['Windows', 'Linux', 'macOS']
+      },
     },
+
     {
       id: '2',
       name: 'API Gateway Manager',
       version: '1.5.2',
       description: 'Manage and monitor API gateway configurations and endpoints.',
       status: AppStatus.Available,
-      versions: ['1.5.2', '1.5.1', '1.5.0'],
-      supportedOS: ['Windows', 'macOS']
-      
+      versionOrder: ['1.5.2', '1.5.1', '1.5.0'],
+      versions: {
+        '1.5.2': ['Windows', 'macOS'],
+        '1.5.1': ['Windows', 'macOS'],
+        '1.5.0': ['Windows', 'macOS']
+      }
     },
     {
       id: '3',
@@ -60,9 +68,12 @@ export class AppService {
       description: 'Real-time database performance monitoring and query analysis.',
       status: AppStatus.UpdateAvailable,
       installedVersion: '2.9.1',
-      versions: ['3.0.0', '2.9.1', '2.9.0'],
-      supportedOS: ['Linux']
-     
+      versionOrder: ['3.0.0', '2.9.1', '2.9.0'],
+      versions: {
+        '3.0.0': ['Linux'],
+        '2.9.1': ['Linux'],
+        '2.9.0': ['Linux']
+      }
     },
     {
       id: '4',
@@ -71,8 +82,12 @@ export class AppService {
       description: 'Centralized log collection and analysis across all services.',
       status: AppStatus.Installed,
       installedVersion: '1.2.3',
-      versions: ['1.2.3', '1.2.2', '1.2.0'],
-      supportedOS: ['Windows', 'macOS', 'Linux']
+      versionOrder: ['1.2.3', '1.2.2', '1.2.0'],
+      versions: {
+        '1.2.3': ['Windows', 'macOS', 'Linux'],
+        '1.2.2': ['Windows', 'macOS', 'Linux'],
+        '1.2.0': ['Windows', 'macOS', 'Linux']
+      }
 
     },
     {
@@ -81,8 +96,12 @@ export class AppService {
       version: '2.3.1',
       description: 'Automated security vulnerability scanning and reporting.',
       status: AppStatus.Available,
-      versions: ['2.3.1', '2.3.0', '2.2.5'],
-      supportedOS: ['Windows', 'macOS', 'Linux']
+      versionOrder: ['2.3.1', '2.3.0', '2.2.5'],
+      versions: {
+        '2.3.1': ['Windows', 'macOS', 'Linux'],
+        '2.3.0': ['Windows', 'macOS', 'Linux'],
+        '2.2.5': ['Windows', 'macOS', 'Linux']
+      }
     },
     {
       id: '6',
@@ -91,8 +110,12 @@ export class AppService {
       description: 'Application performance profiling and bottleneck identification.',
       status: AppStatus.UpdateAvailable,
       installedVersion: '1.8.0',
-      versions: ['1.8.0', '1.7.5', '1.7.0'],
-      supportedOS: ['Windows', 'macOS', 'Linux']
+      versionOrder  : ['1.8.0', '1.7.5', '1.7.0'],
+      versions: {
+        '1.8.0': ['Windows', 'macOS', 'Linux'],
+        '1.7.5': ['Windows', 'macOS', 'Linux'],
+        '1.7.0': ['Windows', 'macOS', 'Linux']
+      }
     }, 
     {
       id: '7',
@@ -100,8 +123,13 @@ export class AppService {
       version: '2.4.0',
       description: 'Manage distributed cache settings and monitor cache health.',
       status: AppStatus.Available,
-      versions: ['2.4.0', '2.3.5', '2.3.0'],
-      supportedOS: ['Windows', 'macOS', 'Linux']
+      versionOrder: ['2.4.0', '2.3.5', '2.3.0'],
+      versions: {
+        '2.4.0': ['Windows', 'Linux'],
+        '2.3.5': ['Windows', 'Linux'],
+        '2.3.0': ['Windows', 'Linux']
+      }
+
     },
 
     {
@@ -111,13 +139,15 @@ export class AppService {
       description: 'Track deployments, release readiness, and version rollout status.',
       status: AppStatus.Installed,
       installedVersion: '1.9.2',
-      versions: ['1.9.2', '1.9.0', '1.8.5'],
-      supportedOS: ['Windows', 'macOS', 'Linux']
+      versionOrder: ['1.9.2', '1.9.0', '1.8.5'],
+      versions: {
+        '1.9.2': ['Windows', 'macOS', 'Linux'],
+        '1.9.0': ['Windows', 'macOS', 'Linux'],
+        '1.8.5': ['Windows', 'macOS', 'Linux']
+      }
     }
 
-    
-
-      ];
+  ];
 
   /**
    * Reactive State Signal

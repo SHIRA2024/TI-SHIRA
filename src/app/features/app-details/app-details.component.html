@@ -75,7 +75,7 @@
           </button>
         }
 
-        @if (canUpdate) {
+        @if (canManageVersions) {
 
           @if (actionInProgress() === 'update') {
             <button class="btn btn-warning btn-large" disabled>
@@ -84,6 +84,14 @@
           } @else {
 
             <div class="version-dropdown">
+              <div class="os-selector">
+                <label for="os-select">Operating System</label>
+                <select id="os-select" [(ngModel)]="selectedOS">
+                  @for (os of availableOperatingSystems; track os) {
+                    <option [value]="os">{{ os }}</option>
+                  }
+                </select>
+              </div>
 
               <div class="update-row">
 
@@ -104,7 +112,7 @@
 
               @if (showVersions) {
                 <div class="dropdown-menu">
-                  @for (version of app()!.versions.slice(1, 30); track version) {
+                  @for (version of app()!.versionOrder.slice(1, 30); track version) {
                     <button
                       class="btn btn-large dropdown-version-btn"
                       [ngClass]="version === app()!.version ? 'btn-warning' : 'btn-downgrade'"

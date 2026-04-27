@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AppService } from '../../services/app.service';
 import { App, AppStatus } from '../../models/app.model';
 import { AppStatusBadgeComponent } from '../../shared/components/app-status-badge/app-status-badge.component';
+import { FormsModule } from '@angular/forms';
 
 /**
  * App Details Component
@@ -14,7 +15,7 @@ import { AppStatusBadgeComponent } from '../../shared/components/app-status-badg
 @Component({
   selector: 'app-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, AppStatusBadgeComponent],
+  imports: [CommonModule, RouterModule, AppStatusBadgeComponent, FormsModule],
   templateUrl: './app-details.component.html',
   styleUrl: './app-details.component.css'
 })
@@ -40,6 +41,11 @@ export class AppDetailsComponent implements OnInit {
    * Controls whether the versions dropdown is open
    */
   showVersions = false;
+
+  /**
+ * Currently selected operating system
+ */
+  selectedOS = 'Windows';
 
   /**
    * Constructor - injects routing and service dependencies
@@ -184,6 +190,44 @@ export class AppDetailsComponent implements OnInit {
     alert('App launch functionality would be implemented here.');
   }
 
+
+    /**
+   * Returns all operating systems supported by the current app
+   */
+  get availableOperatingSystems(): string[] {
+    const app = this.app();
+    if (!app) return [];
+
+    const allOS = new Set<string>();
+
+    for (const version of app.versionOrder) {
+      const osList = app.versions[version] || [];
+      osList.forEach(os => allOS.add(os));
+    }
+
+    return Array.from(allOS);
+  }
+
+  /**
+   * Returns only versions that support the selected operating system
+   */
+  get filteredVersions(): string[] {
+    const app = this.app();
+    if (!app) return [];
+
+    return app.versionOrder.filter(version =>
+      app.versions[version]?.includes(this.selectedOS)
+    );
+  }
+
+  /**
+   * Returns true when versions dropdown should be available
+   * for installed apps and apps with updates available
+   */
+  get canManageVersions(): boolean {
+    return this.app()?.status === AppStatus.Installed ||
+           this.app()?.status === AppStatus.UpdateAvailable;
+  }
   /**
    * Check if install button should be shown
    */

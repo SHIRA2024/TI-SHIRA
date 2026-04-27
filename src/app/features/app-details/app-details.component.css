@@ -384,3 +384,23 @@ a,
 .arrow-btn:hover {
   background-color: #e5e7eb;
 }
+
+.os-selector {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.os-selector label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.os-selector select {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  background: white;
+}

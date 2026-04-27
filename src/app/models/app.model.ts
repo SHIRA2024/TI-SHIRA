@@ -22,8 +22,7 @@ export enum AppStatus {
  * This interface defines the contract for app data throughout the application.
  * 
  * The design is intentionally generic to support any type of internal tool without
- * requiring changes to the core application structure. New app types can be added
- * by simply adding new App objects with this structure.
+ * requiring changes to the core application structure.
  * 
  * @interface App
  * @property {string} id - Unique identifier for the app (required)
@@ -32,24 +31,26 @@ export enum AppStatus {
  * @property {string} version - Current/latest version of the app (required)
  * @property {AppStatus} status - Current installation status of the app (required)
  * @property {string} [installedVersion] - Optional version string of the currently installed version
- *                                        (only present when app is installed or has update available)
  * @property {string} [icon] - Optional URL or path to app icon/logo
- *  @property {string[]} versions - List of available versions for the app (latest first, up to 30 versions)
- *  @property {string[]} supportedOS - List of operating systems supported by the app
+ * 
+ * @property {string[]} versionOrder - Ordered list of versions (latest first, up to 30 versions)
+ * 
+ * @property {Object.<string, string[]>} versions - Mapping between version and supported OS
+ * Example:
+ * {
+ *   "3.0.0": ["Windows", "Linux"],
+ *   "2.9.1": ["Linux"],
+ *   "2.9.0": ["Windows", "macOS"]
+ * }
  */
-
-
 export interface App {
   id: string;
   name: string;
   description: string;
-  versions: string[]; 
   version: string;
+  versionOrder: string[];
+  versions: Record<string, string[]>;
   status: AppStatus;
-  supportedOS: string[];
   installedVersion?: string;
   icon?: string;
-
 }
-
-
