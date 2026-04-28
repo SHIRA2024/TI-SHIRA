@@ -54,11 +54,45 @@ export class AppService {
       version: '1.5.2',
       description: 'Manage and monitor API gateway configurations and endpoints.',
       status: AppStatus.Available,
-      versionOrder: ['1.5.2', '1.5.1', '1.5.0'],
+      versionOrder: [
+        '1.5.2', '1.5.1', '1.5.0', '1.4.9', '1.4.8',
+        '1.4.7', '1.4.6', '1.4.5', '1.4.4', '1.4.3',
+        '1.4.2', '1.4.1', '1.4.0', '1.3.9', '1.3.8',
+        '1.3.7', '1.3.6', '1.3.5', '1.3.4', '1.3.3',
+        '1.3.2', '1.3.1', '1.3.0', '1.2.9', '1.2.8',
+        '1.2.7', '1.2.6', '1.2.5', '1.2.4', '1.2.3'
+      ],
       versions: {
         '1.5.2': ['Windows', 'macOS'],
-        '1.5.1': ['Windows', 'macOS'],
-        '1.5.0': ['Windows', 'macOS']
+        '1.5.1': ['Windows'],
+        '1.5.0': ['macOS'],
+        '1.4.9': ['Linux'],
+        '1.4.8': ['Windows', 'Linux'],
+        '1.4.7': ['macOS', 'Linux'],
+        '1.4.6': ['Windows', 'macOS', 'Linux'],
+        '1.4.5': ['Windows'],
+        '1.4.4': ['macOS'],
+        '1.4.3': ['Linux'],
+        '1.4.2': ['Windows', 'Linux'],
+        '1.4.1': ['Windows', 'macOS'],
+        '1.4.0': ['Windows', 'macOS', 'Linux'],
+        '1.3.9': ['Linux'],
+        '1.3.8': ['Windows'],
+        '1.3.7': ['macOS'],
+        '1.3.6': ['Windows', 'Linux'],
+        '1.3.5': ['macOS', 'Linux'],
+        '1.3.4': ['Windows', 'macOS', 'Linux'],
+        '1.3.3': ['Windows'],
+        '1.3.2': ['Linux'],
+        '1.3.1': ['macOS'],
+        '1.3.0': ['Windows', 'Linux'],
+        '1.2.9': ['Windows', 'macOS'],
+        '1.2.8': ['Linux'],
+        '1.2.7': ['Windows'],
+        '1.2.6': ['macOS'],
+        '1.2.5': ['Windows', 'Linux'],
+        '1.2.4': ['macOS', 'Linux'],
+        '1.2.3': ['Windows', 'macOS', 'Linux']
       }
     },
     {
@@ -90,17 +124,20 @@ export class AppService {
       }
 
     },
-    {
+      {
       id: '5',
       name: 'Security Scanner',
       version: '2.3.1',
       description: 'Automated security vulnerability scanning and reporting.',
       status: AppStatus.Available,
-      versionOrder: ['2.3.1', '2.3.0', '2.2.5'],
+      versionOrder: ['2.3.1', '2.3.0', '2.2.5', '2.2.0', '2.1.5', '2.1.0'],
       versions: {
-        '2.3.1': ['Windows', 'macOS', 'Linux'],
-        '2.3.0': ['Windows', 'macOS', 'Linux'],
-        '2.2.5': ['Windows', 'macOS', 'Linux']
+        '2.3.1': ['Windows', 'macOS'],
+        '2.3.0': ['Windows', 'Linux'],
+        '2.2.5': ['Linux'],
+        '2.2.0': ['Windows', 'macOS', 'Linux'],
+        '2.1.5': ['macOS'],
+        '2.1.0': ['Windows']
       }
     },
     {
@@ -282,6 +319,41 @@ export class AppService {
     });
   }
 
+  installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
+  return new Observable<void>(observer => {
+    setTimeout(() => {
+      const app = this.apps().find(a => a.id === id);
+
+      if (!app) {
+        observer.error(new Error('App not found'));
+        return;
+      }
+
+      const supportedOS = app.versions[targetVersion] || [];
+
+      if (!supportedOS.includes(targetOS)) {
+        observer.error(new Error('Selected OS is not supported for this version'));
+        return;
+      }
+
+      const updatedApp: App = {
+        ...app,
+        status: targetVersion === app.version
+          ? AppStatus.Installed
+          : AppStatus.UpdateAvailable,
+        installedVersion: targetVersion,
+        installedOS: targetOS
+      };
+
+      this.updateAppInArray(updatedApp);
+      this.saveToLocalStorage();
+
+      observer.next();
+      observer.complete();
+    }, 500);
+  });
+}
+
   /**
    * Uninstall Application
    * 
@@ -375,38 +447,45 @@ export class AppService {
     });
   }
 
-  updateAppToVersion(id: string, targetVersion: string) {
-    return new Observable<void>(observer => {
-      setTimeout(() => {
-        const currentApps = this.apps();
-        const appIndex = currentApps.findIndex(app => app.id === id);
+  updateAppToVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
+  return new Observable<void>(observer => {
+    setTimeout(() => {
+      const currentApps = this.apps();
+      const appIndex = currentApps.findIndex(app => app.id === id);
 
-        if (appIndex === -1) {
-          observer.error(new Error('App not found'));
-          return;
-        }
+      if (appIndex === -1) {
+        observer.error(new Error('App not found'));
+        return;
+      }
 
-        const app = currentApps[appIndex];
+      const app = currentApps[appIndex];
+      const supportedOS = app.versions[targetVersion] || [];
 
-        const updatedApp: App = {
-          ...app,
-          installedVersion: targetVersion,
-          status: targetVersion === app.version
-            ? AppStatus.Installed
-            : AppStatus.UpdateAvailable
-        };
+      if (!supportedOS.includes(targetOS)) {
+        observer.error(new Error('Selected OS is not supported for this version'));
+        return;
+      }
 
-        const updatedApps = [...currentApps];
-        updatedApps[appIndex] = updatedApp;
+      const updatedApp: App = {
+        ...app,
+        installedVersion: targetVersion,
+        installedOS: targetOS,
+        status: targetVersion === app.version
+          ? AppStatus.Installed
+          : AppStatus.UpdateAvailable
+      };
 
-        this.apps.set(updatedApps);
-        this.saveToLocalStorage();
+      const updatedApps = [...currentApps];
+      updatedApps[appIndex] = updatedApp;
 
-        observer.next();
-        observer.complete();
-      }, 500);
-    });
-  }
+      this.apps.set(updatedApps);
+      this.saveToLocalStorage();
+
+      observer.next();
+      observer.complete();
+    }, 500);
+  });
+}
 
   /**
    * Get Apps Signal (Read-Only)

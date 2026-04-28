@@ -14,9 +14,7 @@
     <div class="app-header-info">
       <div class="app-title-row">
         <h1 class="app-title">{{ app()!.name }}</h1>
-        
       </div>
-
 
       <p class="hero-description">
         {{ app()!.description }}
@@ -29,8 +27,8 @@
       <section class="app-section">
         <div class="section-header">
           <h2>Description</h2>
-
         </div>
+
         <p class="app-description">{{ app()!.description }}</p>
       </section>
 
@@ -40,18 +38,14 @@
         </div>
 
         <dl>
- 
-          <!-- <div class="detail-item">
-            <dt>Current Version</dt>
-            <dd>{{ app()!.version }}</dd>
-          </div> -->
-
+        
           @if (app()!.installedVersion) {
             <div class="detail-item">
               <dt>Installed Version</dt>
               <dd>{{ app()!.installedVersion }}</dd>
             </div>
           }
+         
         </dl>
       </section>
     </div>
@@ -62,78 +56,62 @@
           <h3>Actions</h3>
         </div>
 
-        @if (canInstall) {
-          <button
-            class="btn btn-primary btn-large"
-            [disabled]="actionInProgress() !== null"
-            (click)="handleInstall()">
-            @if (actionInProgress() === 'install') {
-              Installing...
-            } @else {
-              Install App
-            }
-          </button>
-        }
+        @if (canChooseVersion) {
+          <div class="version-dropdown">
+            <div class="version-selector">
+              <label>Version</label>
 
-        @if (canManageVersions) {
-
-          @if (actionInProgress() === 'update') {
-            <button class="btn btn-warning btn-large" disabled>
-              Updating...
-            </button>
-          } @else {
-
-            <div class="version-dropdown">
-              <div class="os-selector">
-                <label for="os-select">Operating System</label>
-                <select id="os-select" [(ngModel)]="selectedOS">
-                  @for (os of availableOperatingSystems; track os) {
-                    <option [value]="os">{{ os }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="update-row">
-
-                <button 
-                  class="btn btn-warning btn-large update-btn"
-                  [disabled]="actionInProgress() !== null"
-                  (click)="handleUpdate()">
-                  Update to v{{ app()!.version }}
-                </button>
-
-                <button 
-                  class="arrow-btn"
+              <div class="custom-version-dropdown">
+                <button
+                  class="custom-version-button"
+                  type="button"
                   (click)="toggleVersions()">
+
+                  {{ selectedVersion ? getVersionButtonLabel(selectedVersion) : 'Select version' }}
                   <span [class.open]="showVersions">▼</span>
                 </button>
 
+                @if (showVersions) {
+                  <div class="custom-version-menu">
+                    @for (version of versionOptions; track version) {
+                      <button
+                        class="custom-version-item"
+                        type="button"
+                        (click)="handleVersionChange(version)">
+                        {{ getVersionButtonLabel(version) }}
+                      </button>
+                    }
+                  </div>
+                }
               </div>
-
-              @if (showVersions) {
-                <div class="dropdown-menu">
-                  @for (version of app()!.versionOrder.slice(1, 30); track version) {
-                    <button
-                      class="btn btn-large dropdown-version-btn"
-                      [ngClass]="version === app()!.version ? 'btn-warning' : 'btn-downgrade'"
-                      type="button"
-                      (click)="handleVersionChange(version)">
-
-                      {{ version === app()!.version 
-                          ? 'Update to v' + version 
-                          : 'Downgrade to v' + version }}
-
-                    </button>
-                  }
-                </div>
-              }
-
             </div>
 
-          }
+          <button
+            class="btn btn-warning btn-large update-btn"
+            [disabled]="!canRunPrimaryAction"
+            (click)="handlePrimaryVersionAction()">
+            {{ primaryActionLabel }}
+          </button>
+            <div class="os-selector">
+              <label for="os-select">Operating System</label>
 
+              <select
+                id="os-select"
+                [(ngModel)]="selectedOS"
+                [disabled]="!selectedVersion">
+
+                <option [ngValue]="null">
+                  Select operating system
+                </option>
+
+                @for (os of availableOperatingSystems; track os) {
+                  <option [ngValue]="os">{{ os }}</option>
+                }
+              </select>
+            </div>
+
+          </div>
         }
-
 
         @if (canUninstall) {
           <button
@@ -158,3 +136,4 @@
       </div>
     </aside>
   </div>
+</div>

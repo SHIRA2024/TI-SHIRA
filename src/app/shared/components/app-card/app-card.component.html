@@ -8,7 +8,9 @@
     <h3 class="app-name">{{ app().name }}</h3>
     <p class="app-description">{{ app().description }}</p>
     <div class="app-meta">
-      <span class="app-version">v{{ app().version }}</span>
+          <span class="app-version">
+      v{{ app().installedVersion ?? app().version }}
+    </span>
     </div>
   </div>
 </div>

@@ -52,5 +52,6 @@ export interface App {
   versions: Record<string, string[]>;
   status: AppStatus;
   installedVersion?: string;
+  installedOS?: string; // Optional field to track which OS the app is installed on
   icon?: string;
 }
