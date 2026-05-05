@@ -62,6 +62,7 @@ export class AppDetailsComponent implements OnInit {
     if (appId) {
       this.loadApp(appId);
     }
+    console.log(appId);
   }
 
   /**
@@ -72,6 +73,7 @@ export class AppDetailsComponent implements OnInit {
 
     this.appService.getAppById(id).subscribe({
       next: (app) => {
+        console.log('Fetched app details:', app);
         if (app) {
           this.app.set(app);
         }
@@ -186,7 +188,7 @@ export class AppDetailsComponent implements OnInit {
    * Installed latest: show older versions only.
    * Update available: show latest + older versions.
    */
-  get versionOptions(): string[] {
+  get versionOptions(): string[] { 
     const app = this.app();
     if (!app) return [];
 
@@ -194,7 +196,7 @@ export class AppDetailsComponent implements OnInit {
       return app.versionOrder.slice(1, 30);
     }
 
-    return app.versionOrder.slice(0, 30);
+    return app.versionOrder.slice(0, 30); 
   }
 
   /**

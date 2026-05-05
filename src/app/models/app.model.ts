@@ -55,3 +55,4 @@ export interface App {
   installedOS?: string; // Optional field to track which OS the app is installed on
   icon?: string;
 }
+
