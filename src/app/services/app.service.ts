@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, of, delay } from 'rxjs';
 import { App, AppStatus } from '../models/app.model';
-
+import { HttpClient } from '@angular/common/http';
 /**
  * App Service
  * 
