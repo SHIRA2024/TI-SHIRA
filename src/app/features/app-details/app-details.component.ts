@@ -198,8 +198,19 @@ export class AppDetailsComponent implements OnInit {
   }
 
   /**
-   * Main action label changes according to app state and selected version
-   */
+ * Returns the index of a version in the version order.
+ * Lower index means newer version.
+ */
+private getVersionIndex(version: string): number {
+  const app = this.app();
+  if (!app) return -1;
+
+  return app.versionOrder.indexOf(version);
+}
+
+    /**
+     * Main action label changes according to app state and selected version
+     */
   get primaryActionLabel(): string {
     const app = this.app();
 
@@ -211,11 +222,24 @@ export class AppDetailsComponent implements OnInit {
       return `Install v${this.selectedVersion}`;
     }
 
-    if (this.selectedVersion === app.version) {
+    const installedVersion = app.installedVersion;
+
+    if (!installedVersion) {
+      return `Install v${this.selectedVersion}`;
+    }
+
+    const selectedIndex = this.getVersionIndex(this.selectedVersion);
+    const installedIndex = this.getVersionIndex(installedVersion);
+
+    if (selectedIndex < installedIndex) {
       return `Update to v${this.selectedVersion}`;
     }
 
-    return `Downgrade to v${this.selectedVersion}`;
+    if (selectedIndex > installedIndex) {
+      return `Downgrade to v${this.selectedVersion}`;
+    }
+
+    return `Reinstall v${this.selectedVersion}`;
   }
 
   /**
