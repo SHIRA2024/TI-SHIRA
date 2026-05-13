@@ -6,9 +6,6 @@ import { App, AppStatus } from '../models/app.model';
 /**
  * App Service
  * 
- * Central service for managing application data and operations in the Connectivity Toolbox.
- * This service acts as the single source of truth for app state and provides methods
- * for fetching, installing, updating, and uninstalling apps.
  */
 @Injectable({
   providedIn: 'root'
@@ -19,39 +16,60 @@ export class AppService {
    */
   private readonly apiBaseUrl = 'http://localhost:5000/api';
 
-  /**
-   * Reactive State Signal
-   * 
-   * Angular signal containing the current list of all applications.
-   * The data is updated from the backend fetch endpoint.
-   */
+
   private apps = signal<App[]>([]);
 
-  /**
-   * Constructor
-   * 
-   * Injects HttpClient so this service can communicate with the backend.
-   */
   constructor(private http: HttpClient) {}
 
   /**
-   * Get All Applications
-   * 
-   * Fetches the complete list of applications from the backend.
-   * The backend should return the apps with their current status,
-   * installedVersion, latest version, and supported versions.
+   * Get All Applications with Status Mapping
    */
   getApps(): Observable<App[]> {
-    return this.http.get<App[]>(`${this.apiBaseUrl}/fetch-data`).pipe(
-      tap((apps) => {this.apps.set(apps)
-      console.log('Fetched apps from backend:', apps);})
+    return this.http.get<any[]>(`${this.apiBaseUrl}/fetch-data`).pipe(
+      map(backendApps => {
+        return backendApps.map(backendApp => {
+          const extractedVersions = backendApp.versions ? Object.keys(backendApp.versions) : [];
+          const sortedVersions = extractedVersions.reverse();
+
+          let mappedStatus = AppStatus.Available; 
+          if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
+            mappedStatus = AppStatus.Installed;
+          } else if (backendApp.status === 'update available') {
+            mappedStatus = AppStatus.UpdateAvailable;
+          }
+          else
+          {
+            mappedStatus = AppStatus.Available; // Explicitly catch 'not installed'
+          }
+
+          return {
+            ...backendApp,
+            versionOrder: sortedVersions,
+            version: sortedVersions.length > 0 ? sortedVersions[0] : '',
+            status: mappedStatus
+          } as App;
+        });
+      }),
+      tap((apps: App[]) => {
+        this.apps.set(apps);
+        console.log('Mapped apps ready for UI:', apps);
+      })
     );
   }
 
   /**
+   * Internal: Refresh Apps From Backend
+   */
+  private refreshApps(): void {
+    // Fix: Subscribe to getApps() instead of raw http.get 
+    // to ensure the mapping logic runs on refreshed data
+    this.getApps().subscribe({
+      error: (error: unknown) => console.error('Failed to refresh apps', error)
+    });
+  }
+
+  /**
    * Get Application by ID
-   * 
-   * Fetches all apps from the backend and returns the app matching the given id.
    */
   getAppById(id: string): Observable<App | undefined> {
     return this.getApps().pipe(
@@ -59,11 +77,7 @@ export class AppService {
     );
   }
 
-  /**
-   * Install Application
-   * 
-   * Installs the latest version of the app.
-   */
+
   installApp(id: string): Observable<void> {
     const app = this.apps().find((a) => a.id === id);
 
@@ -74,13 +88,8 @@ export class AppService {
     return this.installAppVersion(id, app.version, '');
   }
 
-  /**
-   * Install Application Version
-   * 
-   * Installs a specific version of an app.
-   */
   installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-    return this.http.post<void>(
+    return this.http.get<void>(
       `${this.apiBaseUrl}/install-app/${id}/${targetVersion}`,
       {}
     ).pipe(
@@ -88,13 +97,12 @@ export class AppService {
     );
   }
 
-  /**
-   * Uninstall Application
-   * 
-   * Sends uninstall request to the backend.
-   */
+  openApp(id: string): Observable<void> {
+    return this.http.get<void>(`${this.apiBaseUrl}/run-app/${id}`);
+  }
+  
   uninstallApp(id: string): Observable<void> {
-    return this.http.post<void>(
+    return this.http.get<void>(
       `${this.apiBaseUrl}/uninstall-app/${id}`,
       {}
     ).pipe(
@@ -102,12 +110,7 @@ export class AppService {
     );
   }
 
-  /**
-   * Update Application to Latest Version
-   * 
-   * Updates the app to its latest version.
-   * Used by older UI flows that do not choose a specific version.
-   */
+
   updateApp(id: string): Observable<void> {
     const app = this.apps().find((a) => a.id === id);
 
@@ -118,14 +121,9 @@ export class AppService {
     return this.updateAppToVersion(id, app.version, '');
   }
 
-  /**
-   * Update Application to a Specific Version
-   * 
-   * Updates or downgrades an app to the selected version.
-   * The backend will determine if this is an update or downgrade based on the currently installed version.  
-   */
+
   updateAppToVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-    return this.http.post<void>(
+    return this.http.get<void>(
       `${this.apiBaseUrl}/update-app/${id}/${targetVersion}`,
       {}
     ).pipe(
@@ -142,17 +140,5 @@ export class AppService {
     return this.apps.asReadonly();
   }
 
-  /**
-   * Internal: Refresh Apps From Backend
-   * 
-   * After install/update/uninstall, fetches the updated app list
-   * so the frontend state stays synchronized with the backend.
-   */
-  private refreshApps(): void {
-    this.http.get<App[]>(`${this.apiBaseUrl}/fetch-data`).subscribe({
-      next: (apps) => this.apps.set(apps),
-      error: (error: unknown) => console.error('Failed to refresh apps', error)
-    });
-  }
 }
 

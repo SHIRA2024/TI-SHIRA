@@ -159,15 +159,27 @@ export class AppDetailsComponent implements OnInit {
   /**
    * Launch app placeholder
    */
+  /**
+   * Launch the app by calling the backend open-app endpoint
+   */
   handleLaunch(): void {
     const app = this.app();
     if (!app) return;
 
-    window.dispatchEvent(
-      new CustomEvent('show-toast', {
-        detail: `Running app: ${app.name}`
-      })
-    );
+    this.appService.openApp(app.id).subscribe({ // calls the backend to open the app  
+      next: (response) => {
+        console.log('App opened successfully', response);
+        
+        window.dispatchEvent( // Show a notification on successful launch
+          new CustomEvent('show-toast', {
+            detail: `Running app: ${app.name}`
+          })
+        );
+      },
+      error: (error) => {
+        console.error('Failed to open app', error);
+      }
+    });
   }
   /**
    * OS options depend on the selected version
