@@ -116,6 +116,16 @@ export class MarketplaceComponent implements OnInit {
     });
   }
 
+    /**
+   * Reload Applications
+   * 
+   * Manually reloads the app list from the backend.
+   * Used by the refresh button in the marketplace header.
+   */
+  reloadApps(): void {
+    this.loadApps();
+  }
+
   /**
    * Handle Install Action
    * 
