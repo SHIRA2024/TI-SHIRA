@@ -125,30 +125,41 @@ export class AppDetailsComponent implements OnInit {
       }
     });
   }
-
-  /**
-   * Uninstall the app
-   */
+  
   handleUninstall(): void {
-    const app = this.app();
-    if (!app) return;
+      const app = this.app();
+      if (!app) return;
 
-    this.actionInProgress.set('uninstall');
+      this.actionInProgress.set('uninstall');
 
-    this.appService.uninstallApp(app.id).subscribe({
-      next: () => {
-        this.loadApp(app.id);
-        this.selectedVersion = null;
-        this.selectedOS = null;
-        this.actionInProgress.set(null);
-      },
-      error: (error: unknown) => {
-        console.error('Failed to uninstall app', error);
-        this.actionInProgress.set(null);
-      }
-    });
-  }
+      this.appService.uninstallApp(app.id).subscribe({
+        next: () => {
+          // 1. Tell Angular the app is gone
+          this.app.set({
+            ...app,
+            status: AppStatus.Available,
+            installedVersion: undefined
+          });
 
+          // 2. Pre-select the newest version so the button immediately says "Install"
+          if (app.versionOrder && app.versionOrder.length > 0) {
+            this.selectedVersion = app.versionOrder[0]; 
+          } else {
+            this.selectedVersion = null;
+          }
+
+          // 3. Clear OS so the user has to pick one before the Install button activates
+          this.selectedOS = null; 
+          
+          // 4. Stop the loading spinner
+          this.actionInProgress.set(null);
+        },
+        error: (error: unknown) => {
+          console.error('Failed to uninstall app', error);
+          this.actionInProgress.set(null);
+        }
+      });
+    }
   /**
    * Toggle versions dropdown
    */
