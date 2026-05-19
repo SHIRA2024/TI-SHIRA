@@ -288,12 +288,20 @@ private getVersionIndex(version: string): number {
 
   getVersionButtonLabel(version: string): string {
   const app = this.app();
-  if (!app) return version;
+
+  // אם כבר הגיע V מהשרת — לא נוסיף עוד אחד
+  const displayVersion = version.toLowerCase().startsWith('v')
+    ? version
+    : `V${version}`;
+
+  if (!app) return displayVersion;
 
   if (version === app.version) {
-    return `v${version} (latest)`;
+    return `${displayVersion} (latest)`;
   }
 
-  return `v${version}`;
+  return displayVersion;
 }
+
+
 }
