@@ -10,10 +10,8 @@
           type="button"
           (click)="reloadApps()"
           [disabled]="loading()">
-
           <span class="reload-icon">↻</span>
-          <span>Reload Apps</span>
-
+          <span>{{ loading() ? 'Reloading...' : 'Reload Apps' }}</span>
         </button>
       <div class="view-controls">
         <button 

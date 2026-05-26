@@ -41,20 +41,27 @@
         </p>
       </div>
 
-      @if (canUninstall) {
-        <div class="header-actions">
-          <button
-            class="btn-uninstall-header"
-            [disabled]="actionInProgress() !== null"
-            (click)="handleUninstall()">
-            @if (actionInProgress() === 'uninstall') {
-              Uninstalling...
-            } @else {
-              Uninstall App
-            }
-          </button>
-        </div>
-      }
+      <div class="header-actions">
+  @if (app()!.installedVersion) {
+    <div class="installed-version-header">
+      <span class="installed-version-label">Installed Version</span>
+      <span class="status-pill">{{ app()!.installedVersion }}</span>
+    </div>
+  }
+
+    @if (canUninstall) {
+      <button
+        class="btn-uninstall-header"
+        [disabled]="actionInProgress() !== null"
+        (click)="handleUninstall()">
+        @if (actionInProgress() === 'uninstall') {
+          Uninstalling...
+        } @else {
+          Uninstall App
+        }
+      </button>
+    }
+  </div>
     </div>
 
     <div class="app-details-content">
@@ -125,21 +132,6 @@
         }
       </div>
 
-      <aside class="app-details-sidebar">
-        <section class="app-section sidebar-info">
-          <div class="section-header">
-            <h3>Information</h3>
-          </div>
-          <dl class="app-details-list">
-            @if (app()!.installedVersion) {
-              <div class="detail-item sidebar-item">
-                <dt>Installed Version</dt>
-                <dd><span class="status-pill">{{ app()!.installedVersion }}</span></dd>
-              </div>
-            }
-          </dl>
-        </section>
-      </aside>
     </div>
   }
 </div>

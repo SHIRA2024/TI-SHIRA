@@ -21,6 +21,40 @@ export class AppService {
 
   constructor(private http: HttpClient) {}
 
+      /**
+     * Converts version string to comparable number parts.
+     * Example: V10.1.1 -> [10, 1, 1]
+     */
+    private parseVersion(version: string): number[] {
+      return version
+        .replace(/^v/i, '')
+        .split('.')
+        .map(part => Number(part));
+    }
+
+    /**
+     * Sort versions from newest to oldest.
+     */
+    private sortVersionsNewestFirst(versions: string[]): string[] {
+      return versions.sort((a, b) => {
+        const aParts = this.parseVersion(a);
+        const bParts = this.parseVersion(b);
+
+        const maxLength = Math.max(aParts.length, bParts.length);
+
+        for (let i = 0; i < maxLength; i++) {
+          const aValue = aParts[i] ?? 0;
+          const bValue = bParts[i] ?? 0;
+
+          if (aValue !== bValue) {
+            return bValue - aValue;
+          }
+        }
+
+        return 0;
+      });
+    }
+
   /**
    * Get All Applications with Status Mapping
    */
@@ -29,7 +63,7 @@ export class AppService {
       map(backendApps => {
         return backendApps.map(backendApp => {
           const extractedVersions = backendApp.versions ? Object.keys(backendApp.versions) : [];
-          const sortedVersions = extractedVersions.reverse();
+          const sortedVersions = this.sortVersionsNewestFirst(extractedVersions);
 
           let mappedStatus = AppStatus.Available; 
           if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
