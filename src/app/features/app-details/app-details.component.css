@@ -17,6 +17,19 @@
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
+/* Primary Blue Button Style */
+.btn-primary {
+  background-color: #00558C; /* You can change this hex code to any blue you like! */
+  color: white;
+  border: 1px solid #00406A;
+}
+
+.btn-primary:hover:not([disabled]) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 85, 140, 0.2);
+  background-color: #00406A;
+}
+
 .back-button:hover {
   transform: translateX(-3px);
   color: #0b3a46;

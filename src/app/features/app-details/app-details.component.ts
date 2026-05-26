@@ -244,27 +244,40 @@ private getVersionIndex(version: string): number {
     }
 
     if (app.status === AppStatus.Available) {
-      return `Install v${this.selectedVersion}`;
+      return `Install ${this.selectedVersion}`;
     }
 
     const installedVersion = app.installedVersion;
 
     if (!installedVersion) {
-      return `Install v${this.selectedVersion}`;
+      return `Install ${this.selectedVersion}`;
     }
 
     const selectedIndex = this.getVersionIndex(this.selectedVersion);
     const installedIndex = this.getVersionIndex(installedVersion);
 
     if (selectedIndex < installedIndex) {
-      return `Update to v${this.selectedVersion}`;
+      return `Update to ${this.selectedVersion}`;
     }
 
     if (selectedIndex > installedIndex) {
-      return `Downgrade to v${this.selectedVersion}`;
+      return `Downgrade to ${this.selectedVersion}`;
     }
 
-    return `Reinstall v${this.selectedVersion}`;
+    return `Reinstall ${this.selectedVersion}`;
+  }
+
+  /**
+   * Dynamically switch the button color class!
+   */
+  get primaryActionClass(): string {
+    // If the button text literally starts with the word "Install", make it BLUE!
+    if (this.primaryActionLabel.startsWith('Install')) {
+      return 'btn-primary update-btn'; 
+    }
+
+    // For everything else (Select version, Update, Downgrade, Reinstall), keep it GRAY!
+    return 'btn-warning update-btn';
   }
 
   /**
@@ -302,9 +315,9 @@ private getVersionIndex(version: string): number {
   if (!app) return version;
 
   if (version === app.version) {
-    return `v${version} (latest)`;
+    return `${version} (latest)`;
   }
 
-  return `v${version}`;
+  return `${version}`;
 }
 }

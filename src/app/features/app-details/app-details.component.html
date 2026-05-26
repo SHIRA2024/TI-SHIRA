@@ -7,7 +7,6 @@
   </div>
 
   @if (loading()) {
-    <!-- Modern Skeleton Loader -->
     <div class="skeleton-wrapper">
       <div class="skeleton-header">
         <div class="skeleton-icon pulse"></div>
@@ -107,7 +106,8 @@
 
             <div class="actions-column">
               <button
-                class="btn btn-warning btn-large update-btn"
+                class="btn btn-large"
+                [ngClass]="primaryActionClass"
                 [disabled]="!canRunPrimaryAction"
                 (click)="handlePrimaryVersionAction()">
                 {{ primaryActionLabel }}
