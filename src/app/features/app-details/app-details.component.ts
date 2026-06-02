@@ -46,10 +46,7 @@ export class AppDetailsComponent implements OnInit {
    */
   selectedVersion: string | null = null;
 
-  /**
-   * Selected OS for the selected version
-   */
-  selectedOS: string | null = null;
+
 
   constructor(
     private route: ActivatedRoute,
@@ -92,7 +89,6 @@ export class AppDetailsComponent implements OnInit {
    */
   handleVersionChange(version: string): void {
     this.selectedVersion = version;
-    this.selectedOS = null;
     this.showVersions = false;
   }
 
@@ -101,22 +97,25 @@ export class AppDetailsComponent implements OnInit {
    */
   handlePrimaryVersionAction(): void {
     const app = this.app();
+    console.log('Update button clicked');
+    console.log('app:', app);
+    console.log('selectedVersion:', this.selectedVersion);
+    console.log('app status:', app?.status);
 
-    if (!app || !this.selectedVersion || !this.selectedOS) {
+    if (!app || !this.selectedVersion) {
       return;
     }
 
     this.actionInProgress.set('update');
 
     const action$ = app.status === AppStatus.Available
-      ? this.appService.installAppVersion(app.id, this.selectedVersion, this.selectedOS)
-      : this.appService.updateAppToVersion(app.id, this.selectedVersion, this.selectedOS);
+      ? this.appService.installAppVersion(app.id, this.selectedVersion, '')
+      : this.appService.updateAppToVersion(app.id, this.selectedVersion, '');
 
     action$.subscribe({
       next: () => {
         this.loadApp(app.id);
         this.selectedVersion = null;
-        this.selectedOS = null;
         this.actionInProgress.set(null);
       },
       error: (error: unknown) => {
@@ -139,7 +138,6 @@ export class AppDetailsComponent implements OnInit {
       next: () => {
         this.loadApp(app.id);
         this.selectedVersion = null;
-        this.selectedOS = null;
         this.actionInProgress.set(null);
       },
       error: (error: unknown) => {
@@ -182,33 +180,16 @@ export class AppDetailsComponent implements OnInit {
     });
   }
   /**
-   * OS options depend on the selected version
-   */
-  get availableOperatingSystems(): string[] {
-    const app = this.app();
-
-    if (!app || !this.selectedVersion) {
-      return [];
-    }
-
-    return app.versions[this.selectedVersion] || [];
-  }
-
-  /**
    * Versions shown in dropdown.
    * Available app: show all versions.
    * Installed latest: show older versions only.
    * Update available: show latest + older versions.
    */
-  get versionOptions(): string[] { 
+    get versionOptions(): string[] {
     const app = this.app();
     if (!app) return [];
 
-    if (app.status === AppStatus.Installed) {
-      return app.versionOrder.slice(1, 30);
-    }
-
-    return app.versionOrder.slice(0, 30); 
+    return app.versionOrder.slice(0, 30);
   }
 
   /**
@@ -259,12 +240,11 @@ private getVersionIndex(version: string): number {
   /**
    * Main action is enabled only after version and OS are selected
    */
-  get canRunPrimaryAction(): boolean {
-    return !!this.app() &&
-           !!this.selectedVersion &&
-           !!this.selectedOS &&
-           this.actionInProgress() === null;
-  }
+get canRunPrimaryAction(): boolean {
+  return !!this.app() &&
+         !!this.selectedVersion &&
+         this.actionInProgress() === null;
+}
 
   /**
    * Every app can choose a version:
@@ -301,6 +281,34 @@ private getVersionIndex(version: string): number {
   }
 
   return displayVersion;
+}
+
+reloadCurrentApp(): void {
+  const app = this.app();
+
+  if (!app) {
+    return;
+  }
+
+  this.loading.set(true);
+
+  this.appService.reloadApp(app.id).subscribe({
+    next: (updatedApp) => {
+      this.app.set(updatedApp);
+
+      window.dispatchEvent(
+        new CustomEvent('show-toast', {
+          detail: `${updatedApp.name} reloaded successfully`
+        })
+      );
+
+      this.loading.set(false);
+    },
+    error: (error) => {
+      console.error('Failed to reload app', error);
+      this.loading.set(false);
+    }
+  });
 }
 
 

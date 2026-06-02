@@ -42,27 +42,39 @@
       </div>
 
       <div class="header-actions">
-  @if (app()!.installedVersion) {
-    <div class="installed-version-header">
-      <span class="installed-version-label">Installed Version</span>
-      <span class="status-pill">{{ app()!.installedVersion }}</span>
-    </div>
-  }
 
-    @if (canUninstall) {
-      <button
-        class="btn-uninstall-header"
-        [disabled]="actionInProgress() !== null"
-        (click)="handleUninstall()">
-        @if (actionInProgress() === 'uninstall') {
-          Uninstalling...
-        } @else {
-          Uninstall App
+  
+      @if (app()!.installedVersion) {
+        <div class="installed-version-header">
+          <span class="installed-version-label">Installed Version</span>
+          <span class="status-pill">{{ app()!.installedVersion }}</span>
+        </div>
+      }
+      
+        @if (canUninstall) {
+          <button
+            class="btn-uninstall-header"
+            [disabled]="actionInProgress() !== null"
+            (click)="handleUninstall()">
+            @if (actionInProgress() === 'uninstall') {
+              Uninstalling...
+            } @else {
+              Uninstall App
+            }
+          </button>
         }
-      </button>
-    }
+      </div>
+        <div class="reload-app-row">
+    <button
+      class="btn-reload-header"
+      [disabled]="loading()"
+      (click)="reloadCurrentApp()">
+      Reload App
+    </button>
   </div>
     </div>
+    
+   
 
     <div class="app-details-content">
       <div class="app-details-main">
@@ -94,20 +106,6 @@
                     </div>
                   }
                 </div>
-              </div>
-
-              <!-- Operating System Selector -->
-              <div class="os-selector position-relative">
-                <select
-                  id="os-select"
-                  [(ngModel)]="selectedOS"
-                  [disabled]="!selectedVersion">
-                  <option [ngValue]="null">Select operating system</option>
-                  @for (os of availableOperatingSystems; track os) {
-                    <option [ngValue]="os">{{ os }}</option>
-                  }
-                </select>
-                <span class="selector-arrow absolute-arrow">⌄</span>
               </div>
               
             </div>

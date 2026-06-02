@@ -58,38 +58,48 @@ export class AppService {
   /**
    * Get All Applications with Status Mapping
    */
-  getApps(): Observable<App[]> {
-    return this.http.get<any[]>(`${this.apiBaseUrl}/fetch-data`).pipe(
-      map(backendApps => {
-        return backendApps.map(backendApp => {
-          const extractedVersions = backendApp.versions ? Object.keys(backendApp.versions) : [];
-          const sortedVersions = this.sortVersionsNewestFirst(extractedVersions);
+  /**
+ * Get All Applications with Status Mapping
+ */
+getApps(): Observable<App[]> {
+  return this.http.get<Record<string, any>>(`${this.apiBaseUrl}/fetch-data`).pipe(
+    map((backendAppsObject) => {
+      const backendApps = Object.entries(backendAppsObject).map(([id, backendApp]) => {
+        const extractedVersions = Array.isArray(backendApp.versions)
+          ? backendApp.versions
+          : backendApp.versions
+            ? Object.keys(backendApp.versions)
+            : [];
 
-          let mappedStatus = AppStatus.Available; 
-          if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
-            mappedStatus = AppStatus.Installed;
-          } else if (backendApp.status === 'update available') {
-            mappedStatus = AppStatus.UpdateAvailable;
-          }
-          else
-          {
-            mappedStatus = AppStatus.Available; // Explicitly catch 'not installed'
-          }
+        const sortedVersions = this.sortVersionsNewestFirst(extractedVersions);
 
-          return {
-            ...backendApp,
-            versionOrder: sortedVersions,
-            version: sortedVersions.length > 0 ? sortedVersions[0] : '',
-            status: mappedStatus
-          } as App;
-        });
-      }),
-      tap((apps: App[]) => {
-        this.apps.set(apps);
-        console.log('Mapped apps ready for UI:', apps);
-      })
-    );
-  }
+        let mappedStatus = AppStatus.Available;
+
+        if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
+          mappedStatus = AppStatus.Installed;
+        } else if (backendApp.status === 'update available') {
+          mappedStatus = AppStatus.UpdateAvailable;
+        } else {
+          mappedStatus = AppStatus.Available;
+        }
+
+        return {
+          ...backendApp,
+          id: backendApp.id ?? id,
+          versionOrder: sortedVersions,
+          version: sortedVersions.length > 0 ? sortedVersions[0] : '',
+          status: mappedStatus
+        } as App;
+      });
+
+      return backendApps;
+    }),
+    tap((apps: App[]) => {
+      this.apps.set(apps);
+      console.log('Mapped apps ready for UI:', apps);
+    })
+  );
+}
 
   /**
    * Internal: Refresh Apps From Backend
@@ -105,10 +115,8 @@ export class AppService {
   /**
    * Get Application by ID
    */
-  getAppById(id: string): Observable<App | undefined> {
-    return this.getApps().pipe(
-      map((apps) => apps.find((app) => app.id === id))
-    );
+  getAppById(id: string): Observable<App> {
+    return this.reloadApp(id);
   }
 
 
@@ -173,6 +181,70 @@ export class AppService {
   getAppsSignal() {
     return this.apps.asReadonly();
   }
+
+scheduleBackendShutdown(): void {
+  const shutdownUrl = `${this.apiBaseUrl}/shutdown/schedule`;
+
+  const sent = navigator.sendBeacon(shutdownUrl);
+
+  if (!sent) {
+    fetch(shutdownUrl, {
+      method: 'POST',
+      keepalive: true,
+      mode: 'no-cors'
+    }).catch((error) => {
+      console.error('Failed to schedule backend shutdown', error);
+    });
+  }
+}
+
+cancelBackendShutdown(): Observable<void> {
+  return this.http.post<void>(`${this.apiBaseUrl}/shutdown/cancel`, {});
+}
+
+shutdownBackendNow(): Observable<void> {
+  return this.http.post<void>(`${this.apiBaseUrl}/shutdown`, {});
+}
+
+reloadApp(id: string): Observable<App> {
+  return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
+    map((backendApp) => {
+      const extractedVersions = Array.isArray(backendApp.versions)
+        ? backendApp.versions
+        : backendApp.versions
+          ? Object.keys(backendApp.versions)
+          : [];
+
+      const sortedVersions = this.sortVersionsNewestFirst(extractedVersions);
+
+      let mappedStatus = AppStatus.Available;
+
+      if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
+        mappedStatus = AppStatus.Installed;
+      } else if (backendApp.status === 'update available') {
+        mappedStatus = AppStatus.UpdateAvailable;
+      }
+
+      return {
+        ...backendApp,
+        id: String(backendApp.id ?? id),
+        versionOrder: sortedVersions,
+        version: sortedVersions.length > 0 ? sortedVersions[0] : '',
+        status: mappedStatus
+      } as App;
+    }),
+    tap((updatedApp: App) => {
+      const currentApps = this.apps();
+      const existingIndex = currentApps.findIndex(app => String(app.id) === String(updatedApp.id));
+
+      if (existingIndex >= 0) {
+        const updatedApps = [...currentApps];
+        updatedApps[existingIndex] = updatedApp;
+        this.apps.set(updatedApps);
+      }
+    })
+  );
+}
 
 }
 
