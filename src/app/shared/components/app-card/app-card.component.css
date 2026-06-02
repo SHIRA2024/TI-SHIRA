@@ -264,3 +264,23 @@
   user-select: none;
   cursor: default;
 }
+
+/* Styling for the button to maintain a stable size when swapping to the icon */
+.run-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 60px; /* Maintains a minimum width so the button layout doesn't jump */
+}
+
+/* Styling for the physical icon and its animation */
+.running-svg {
+  width: 18px;
+  height: 18px;
+  animation: runAnimation 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes runAnimation {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-2px) rotate(10deg); }
+}

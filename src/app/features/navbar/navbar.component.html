@@ -20,4 +20,16 @@
   <main class="navbar-main">
     <router-outlet></router-outlet>
   </main>
-</div>
+</div> @if (appService.runningAppId()) {
+  <div class="running-overlay">
+    <span class="running-icon">🏃</span>
+    <span class="running-text"> {{ appService.runningAppName() }} is running...</span>
+  </div>
+}
+
+@if (notificationService.currentToast(); as toast) {
+  <div class="toast-notification">
+    <span class="toast-message">{{ toast.message }}</span>
+    <button class="close-toast" (click)="notificationService.clearToast()">✕</button>
+  </div>
+}

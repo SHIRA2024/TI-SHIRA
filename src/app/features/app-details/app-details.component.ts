@@ -102,21 +102,20 @@ export class AppDetailsComponent implements OnInit {
   handlePrimaryVersionAction(): void {
     const app = this.app();
 
-    if (!app || !this.selectedVersion || !this.selectedOS) {
+    if (!app || !this.selectedVersion) {
       return;
     }
 
     this.actionInProgress.set('update');
 
     const action$ = app.status === AppStatus.Available
-      ? this.appService.installAppVersion(app.id, this.selectedVersion, this.selectedOS)
-      : this.appService.updateAppToVersion(app.id, this.selectedVersion, this.selectedOS);
+      ? this.appService.installAppVersion(app.id, this.selectedVersion, '')
+      : this.appService.updateAppToVersion(app.id, this.selectedVersion, '');
 
     action$.subscribe({
       next: () => {
         this.loadApp(app.id);
         this.selectedVersion = null;
-        this.selectedOS = null;
         this.actionInProgress.set(null);
       },
       error: (error: unknown) => {
@@ -180,29 +179,11 @@ export class AppDetailsComponent implements OnInit {
     this.appService.openApp(app.id).subscribe({ // calls the backend to open the app  
       next: (response) => {
         console.log('App opened successfully', response);
-        
-        window.dispatchEvent( // Show a notification on successful launch
-          new CustomEvent('show-toast', {
-            detail: `Running app: ${app.name}`
-          })
-        );
       },
       error: (error) => {
         console.error('Failed to open app', error);
       }
     });
-  }
-  /**
-   * OS options depend on the selected version
-   */
-  get availableOperatingSystems(): string[] {
-    const app = this.app();
-
-    if (!app || !this.selectedVersion) {
-      return [];
-    }
-
-    return app.versions[this.selectedVersion] || [];
   }
 
   /**
@@ -286,7 +267,6 @@ private getVersionIndex(version: string): number {
   get canRunPrimaryAction(): boolean {
     return !!this.app() &&
            !!this.selectedVersion &&
-           !!this.selectedOS &&
            this.actionInProgress() === null;
   }
 

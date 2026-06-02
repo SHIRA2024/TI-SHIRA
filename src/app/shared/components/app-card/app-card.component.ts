@@ -3,7 +3,7 @@ import { App, AppStatus } from '../../../models/app.model';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AppStatusBadgeComponent } from '../app-status-badge/app-status-badge.component';
-
+import { AppService } from '../../../services/app.service';
 /**
  * App Card Component
  * 
@@ -40,46 +40,14 @@ import { AppStatusBadgeComponent } from '../app-status-badge/app-status-badge.co
   styleUrl: './app-card.component.css'
 })
 export class AppCardComponent {
-  /**
-   * App Data Input
-   * 
-   * Required input signal containing the app object to display.
-   * The component reads properties from this object to render the card.
-   * 
-   * @required This input must be provided when using the component
-   */
+
   app = input.required<App>();
-  
-  /**
-   * Install Event Output
-   * 
-   * Emits the app ID when the user clicks the install button.
-   * The parent component should handle the actual installation logic.
-   * 
-   * Event Payload: app.id (string)
-   */
   onInstall = output<string>();
-  
-  /**
-   * Uninstall Event Output
-   * 
-   * Emits the app ID when the user clicks the uninstall button.
-   * The parent component should handle the actual uninstallation logic.
-   * 
-   * Event Payload: app.id (string)
-   */
   onUninstall = output<string>();
-  
-  /**
-   * Update Event Output
-   * 
-   * Emits the app ID when the user clicks the update button.
-   * The parent component should handle the actual update logic.
-   * 
-   * Event Payload: app.id (string)
-   */
   onUpdate = output<string>();
 
+  constructor(public appService: AppService) {}
+  
   /**
    * Can Install Check
    * 
@@ -166,13 +134,12 @@ export class AppCardComponent {
   handleUpdate(): void {
     this.onUpdate.emit(this.app().id);
   }
-handleRun(): void {
-  const event = new CustomEvent('show-toast', {
-    detail: `Running app: ${this.app().name}`
-  });
 
-  window.dispatchEvent(event);
-}
+  handleRun(): void {
+      this.appService.openApp(this.app().id).subscribe({
+        error: (err) => console.error('Failed to run app', err)
+      });
+    }
 
 }
 

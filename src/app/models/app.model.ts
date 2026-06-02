@@ -37,11 +37,7 @@ export enum AppStatus {
  * 
  * @property {Object.<string, string[]>} versions - Mapping between version and supported OS
  * Example:
- * {
- *   "3.0.0": ["Windows", "Linux"],
- *   "2.9.1": ["Linux"],
- *   "2.9.0": ["Windows", "macOS"]
- * }
+
  */
 export interface App {
   id: string;
@@ -49,10 +45,9 @@ export interface App {
   description: string;
   version: string;
   versionOrder: string[];
-  versions: Record<string, string[]>;
+  versions: string[] | null;
   status: AppStatus;
   installedVersion?: string;
-  installedOS?: string; // Optional field to track which OS the app is installed on
   icon?: string;
 }
 

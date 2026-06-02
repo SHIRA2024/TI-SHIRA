@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angula
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
+import { AppService } from '../../services/app.service';
+import { NotificationService } from '../../services/notification.service';
 /**
  * Navbar Component
  * 
@@ -37,11 +39,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
    * Shown in the header navigation bar.
    */
       title = 'Connectivity Toolbox';
+      toastMessage: string | null = null;
+
       constructor(
         private ngZone: NgZone,
-        private cdr: ChangeDetectorRef
+        private cdr: ChangeDetectorRef,
+        public appService: AppService, 
+        public notificationService: NotificationService
       ) {}
-        toastMessage: string | null = null;
 
         private toastListener = (event: Event) => {
       const customEvent = event as CustomEvent<string>;

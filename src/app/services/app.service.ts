@@ -1,7 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap, of, catchError } from 'rxjs';
+import { Observable, map, tap, of, catchError, timer, Subscription, switchMap} from 'rxjs';
 import { App, AppStatus } from '../models/app.model';
+import { NotificationService } from './notification.service';
 
 /**
  * App Service
@@ -15,11 +16,18 @@ export class AppService {
    * Backend base URL
    */
   private readonly apiBaseUrl = 'http://localhost:5000/api';
-
-
   private apps = signal<App[]>([]);
 
-  constructor(private http: HttpClient) {}
+  runningAppId = signal<string | null>(null);
+  runningAppName = computed(() => {
+    const id = this.runningAppId();
+    const app = this.apps().find(a => String(a.id) === String(id));
+    return app ? app.name : '';
+  });
+
+  private statusSubscription: Subscription | null = null; // The subscription reference for the status polling observable
+
+  constructor(private http: HttpClient, private notificationService: NotificationService) {}
 
   /**
    * Get All Applications with Status Mapping
@@ -32,12 +40,11 @@ export class AppService {
         // Convert the Python dictionary { "1": {...} } into a standard array [{...}]
         const backendAppsArray = Object.values(backendData);
 
-        //  Loop through the array and map each item to match the Angular App interface
+        // Loop through the array and map each item to match the Angular App interface
         return backendAppsArray.map((backendApp: any) => {
           
-          // handle 'null' versions from the lightweight marketplace fetch
-          const extractedVersions = backendApp.versions ? Object.keys(backendApp.versions) : [];
-          const sortedVersions = extractedVersions.reverse();
+          // 🚀 THE FIX: Directly use the array sent by the backend, or default to an empty array if null
+          const sortedVersions = backendApp.versions || [];
 
           // Translate Python status strings into Angular AppStatus Enums
           let mappedStatus = AppStatus.Available; 
@@ -49,7 +56,7 @@ export class AppService {
             mappedStatus = AppStatus.Available; 
           }
 
-          //  Construct and return the final App object
+          // Construct and return the final App object
           return {
             ...backendApp,
             id: String(backendApp.id),
@@ -68,24 +75,15 @@ export class AppService {
   }
 
   /**
-   * Refresh Apps From Backend
-   */
-  private refreshApps(): void {
-    this.getApps().subscribe({
-      error: (error: unknown) => console.error('Failed to refresh apps', error)
-    });
-  }
-
-  /**
    * Get Application by ID (Network First, Fallback to Cache)
    */
   getAppById(id: string): Observable<App> {
     
     return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
       map(backendApp => {
-        // Map the raw Python data into our Angular App model
-        const extractedVersions = backendApp.versions ? Object.keys(backendApp.versions) : [];
-        const sortedVersions = extractedVersions.reverse();
+        
+        // Directly use the array sent by the backend, or default to an empty array if null
+        const sortedVersions = backendApp.versions || [];
 
         let mappedStatus = AppStatus.Available; 
         if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
@@ -137,6 +135,15 @@ export class AppService {
     );
   }
 
+  /**
+   * Refresh Apps From Backend
+   */
+  private refreshApps(): void {
+    this.getApps().subscribe({
+      error: (error: unknown) => console.error('Failed to refresh apps', error)
+    });
+  }
+
 
   installApp(id: string): Observable<void> {
     const app = this.apps().find((a) => a.id === id);
@@ -158,7 +165,57 @@ export class AppService {
   }
 
   openApp(id: string): Observable<void> {
-    return this.http.get<void>(`${this.apiBaseUrl}/run-app/${id}`);
+    // Turn ON the running indicator
+    this.runningAppId.set(id);
+
+    return this.http.get<void>(`${this.apiBaseUrl}/run-app/${id}`).pipe(
+      tap(() => {
+        //  Once the app successfully starts, begin polling the server!
+        this.startMonitoringProcess(id);
+      }),
+      catchError((error) => {
+        // Turn OFF the running indicator if it fails, and show error
+        this.runningAppId.set(null);
+        this.notificationService.showError('Error: Could not run the application.');
+        throw error;
+      })
+    );
+  }
+
+  // This polls the Python server every 2 seconds
+  private startMonitoringProcess(id: string) {
+    // Clear any old monitors just in case
+    if (this.statusSubscription) {
+      this.statusSubscription.unsubscribe();
+    }
+
+    // Ping the server every 2000 milliseconds (2 seconds)
+    this.statusSubscription = timer(0, 2000).pipe(
+      // Asking Python: "Is it still running?" (Expecting the "running" key from your controller)
+      switchMap(() => this.http.get<{success: boolean, message: string, running: boolean}>(`${this.apiBaseUrl}/run-status/${id}`))
+    ).subscribe({
+      next: (response) => {
+        if (!response.running) {
+          // The app was closed on the computer! Hide the running man immediately.
+          this.runningAppId.set(null);
+          this.statusSubscription?.unsubscribe();
+        }
+      },
+      error: () => {
+        // If the server disconnects, turn off the UI indicator
+        this.runningAppId.set(null);
+        this.statusSubscription?.unsubscribe();
+      }
+    });
+  }
+
+  // Add this helper function right below startMonitoringProcess
+  stopRunning() {
+    this.runningAppId.set(null);
+    // Stop the polling timer if we manually close the UI window
+    if (this.statusSubscription) {
+      this.statusSubscription.unsubscribe();
+    }
   }
   
   uninstallApp(id: string): Observable<void> {
