@@ -48,6 +48,6 @@ export interface App {
   versions: string[] | null;
   status: AppStatus;
   installedVersion?: string;
-  icon?: string;
+  iconPath?: string | null;
 }
 

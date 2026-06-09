@@ -28,7 +28,11 @@
   } @else {
     <div class="app-details-header">
       <div class="app-icon-large">
-        <span class="icon-placeholder">{{ app()!.name.charAt(0) }}</span>
+        @if (app()!.iconPath) {
+          <img [src]="app()!.iconPath" alt="{{ app()!.name }} icon" class="app-icon-image" />
+        } @else {
+          <span class="icon-placeholder">{{ app()!.name.charAt(0) | uppercase }}</span>
+        }
       </div>
 
       <div class="app-header-info">
@@ -100,11 +104,18 @@
               </button>
 
               @if (isInstalled) {
-                <button
-                  class="btn btn-secondary btn-large"
-                  (click)="handleLaunch()">
-                  Run
-                </button>
+                @if (appService.isAppRunning(app()!.id)) {
+                  <div style="display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: bold;">
+                    <span class="running-icon">🏃</span>
+                    <span>Running...</span>
+                  </div>
+                } @else {
+                  <button
+                    class="btn btn-secondary btn-large"
+                    (click)="handleLaunch()">
+                    Run
+                  </button>
+                }
               }
             </div>
           </section>

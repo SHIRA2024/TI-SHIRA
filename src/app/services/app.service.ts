@@ -18,12 +18,13 @@ export class AppService {
   private readonly apiBaseUrl = 'http://localhost:5000/api';
   private apps = signal<App[]>([]);
 
-  runningAppId = signal<string | null>(null);
-  runningAppName = computed(() => {
-    const id = this.runningAppId();
-    const app = this.apps().find(a => String(a.id) === String(id));
-    return app ? app.name : '';
-  });
+  // Stores a list of all currently running apps
+  runningApps = signal<{id: string, name: string}[]>([]);
+
+  // Helper function to check if a specific app ID is currently running
+  isAppRunning(id: string): boolean {
+    return this.runningApps().some(app => app.id === id);
+  }
 
   private statusSubscription: Subscription | null = null; // The subscription reference for the status polling observable
 
@@ -62,8 +63,8 @@ export class AppService {
             id: String(backendApp.id),
             versionOrder: sortedVersions,
             version: sortedVersions.length > 0 ? sortedVersions[0] : '',
-            status: mappedStatus
-          } as App;
+            status: mappedStatus,
+            iconPath: backendApp.iconPath ? `${this.apiBaseUrl.replace('/api', '')}/api/icons/${backendApp.id}/${backendApp.iconPath}` : null          } as App;
         });
       }),
       tap((apps: App[]) => {
@@ -74,6 +75,18 @@ export class AppService {
     );
   }
 
+    // Adds an app to the running list when launched
+  addRunningApp(id: string, name: string) {
+    // Check if it already exists to prevent duplicates
+    if (!this.isAppRunning(id)) {
+      this.runningApps.update(apps => [...apps, { id, name }]);
+    }
+  }
+
+  // Removes an app from the running list when closed
+  removeRunningApp(id: string) {
+    this.runningApps.update(apps => apps.filter(app => app.id !== id));
+  }
   /**
    * Get Application by ID (Network First, Fallback to Cache)
    */
@@ -99,7 +112,8 @@ export class AppService {
           id: String(backendApp.id),
           versionOrder: sortedVersions,
           version: sortedVersions.length > 0 ? sortedVersions[0] : '',
-          status: mappedStatus
+          status: mappedStatus,
+          iconPath: backendApp.iconPath ? `${this.apiBaseUrl.replace('/api', '')}/api/icons/${backendApp.id}/${backendApp.iconPath}` : null
         } as App;
       }),
       tap((mappedApp: App) => {
@@ -166,7 +180,7 @@ export class AppService {
 
   openApp(id: string): Observable<void> {
     // Turn ON the running indicator
-    this.runningAppId.set(id);
+    this.addRunningApp(id, this.apps().find(a => String(a.id) === String(id))?.name || '');
 
     return this.http.get<void>(`${this.apiBaseUrl}/run-app/${id}`).pipe(
       tap(() => {
@@ -175,7 +189,7 @@ export class AppService {
       }),
       catchError((error) => {
         // Turn OFF the running indicator if it fails, and show error
-        this.runningAppId.set(null);
+        this.removeRunningApp(id);
         this.notificationService.showError('Error: Could not run the application.');
         throw error;
       })
@@ -197,13 +211,13 @@ export class AppService {
       next: (response) => {
         if (!response.running) {
           // The app was closed on the computer! Hide the running man immediately.
-          this.runningAppId.set(null);
+          this.removeRunningApp(id);
           this.statusSubscription?.unsubscribe();
         }
       },
       error: () => {
         // If the server disconnects, turn off the UI indicator
-        this.runningAppId.set(null);
+        this.removeRunningApp(id);
         this.statusSubscription?.unsubscribe();
       }
     });
@@ -211,7 +225,7 @@ export class AppService {
 
   // Add this helper function right below startMonitoringProcess
   stopRunning() {
-    this.runningAppId.set(null);
+    this.runningApps.set([]);
     // Stop the polling timer if we manually close the UI window
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();

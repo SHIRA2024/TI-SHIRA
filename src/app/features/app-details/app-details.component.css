@@ -128,17 +128,17 @@
 }
 
 .app-icon-large {
-  width: 4.75rem;
-  height: 4.75rem;
-  border-radius: 0.9rem;
-  background: linear-gradient(135deg, #c00, #900 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 2.2rem;
+  width: 100px; 
+  height: 100px;
   flex-shrink: 0;
+}
+
+.app-icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
+  border-radius: 16px; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
 }
 
 .app-header-info {
@@ -414,4 +414,15 @@
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+button.is-running {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  cursor: default; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; 
 }

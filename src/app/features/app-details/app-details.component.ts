@@ -54,7 +54,7 @@ export class AppDetailsComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private appService: AppService
+    public appService: AppService
   ) {}
 
   ngOnInit(): void {
