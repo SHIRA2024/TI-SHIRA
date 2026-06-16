@@ -26,7 +26,7 @@ export class AppService {
     return this.runningApps().some(app => app.id === id);
   }
 
-  private statusSubscription: Subscription | null = null; // The subscription reference for the status polling observable
+  private statusSubscriptions = new Map<string, Subscription>();
 
   constructor(private http: HttpClient, private notificationService: NotificationService) {}
 
@@ -44,7 +44,7 @@ export class AppService {
         // Loop through the array and map each item to match the Angular App interface
         return backendAppsArray.map((backendApp: any) => {
           
-          // 🚀 THE FIX: Directly use the array sent by the backend, or default to an empty array if null
+          //  THE FIX: Directly use the array sent by the backend, or default to an empty array if null
           const sortedVersions = backendApp.versions || [];
 
           // Translate Python status strings into Angular AppStatus Enums
@@ -71,7 +71,24 @@ export class AppService {
         // Save the perfectly mapped array into the global cache
         this.apps.set(apps);
         console.log('Mapped apps ready for UI:', apps);
-      })
+      }),
+      //  The new safety net for offline mode! 
+      catchError((error) => {
+        console.warn('Network fetch failed for ALL apps. Attempting to use local cache...');
+        
+        // Look inside our local signal memory
+        const cachedApps = this.apps();
+        
+        // Check if we already have apps saved in memory from a previous fetch
+        if (cachedApps.length > 0) {
+          console.log('Successfully recovered the apps list from cache!');
+          // Return the cached data so the marketplace UI doesn't break
+          return of(cachedApps); 
+        }
+
+        throw error;
+
+      })      
     );
   }
 
@@ -152,12 +169,13 @@ export class AppService {
   /**
    * Refresh Apps From Backend
    */
-  private refreshApps(): void {
+  refreshApps(): void {
     this.getApps().subscribe({
       error: (error: unknown) => console.error('Failed to refresh apps', error)
     });
   }
 
+  
 
   installApp(id: string): Observable<void> {
     const app = this.apps().find((a) => a.id === id);
@@ -196,42 +214,46 @@ export class AppService {
     );
   }
 
-  // This polls the Python server every 2 seconds
+// This polls the Python server every 2 seconds
   private startMonitoringProcess(id: string) {
-    // Clear any old monitors just in case
-    if (this.statusSubscription) {
-      this.statusSubscription.unsubscribe();
+    // Clear any old monitor JUST FOR THIS APP
+    if (this.statusSubscriptions.has(id)) {
+      this.statusSubscriptions.get(id)?.unsubscribe();
     }
 
     // Ping the server every 2000 milliseconds (2 seconds)
-    this.statusSubscription = timer(0, 2000).pipe(
-      // Asking Python: "Is it still running?" (Expecting the "running" key from your controller)
+    const sub = timer(0, 2000).pipe(
+      // Asking Python: "Is it still running?" 
       switchMap(() => this.http.get<{success: boolean, message: string, running: boolean}>(`${this.apiBaseUrl}/run-status/${id}`))
     ).subscribe({
       next: (response) => {
         if (!response.running) {
-          // The app was closed on the computer! Hide the running man immediately.
+          // The app was closed! Hide the running man and clear its specific timer
           this.removeRunningApp(id);
-          this.statusSubscription?.unsubscribe();
+          this.statusSubscriptions.get(id)?.unsubscribe();
+          this.statusSubscriptions.delete(id);
         }
       },
       error: () => {
         // If the server disconnects, turn off the UI indicator
         this.removeRunningApp(id);
-        this.statusSubscription?.unsubscribe();
+        this.statusSubscriptions.get(id)?.unsubscribe();
+        this.statusSubscriptions.delete(id);
       }
     });
+
+    // Save this app's timer in the dictionary
+    this.statusSubscriptions.set(id, sub);
   }
 
-  // Add this helper function right below startMonitoringProcess
-  stopRunning() {
-    this.runningApps.set([]);
-    // Stop the polling timer if we manually close the UI window
-    if (this.statusSubscription) {
-      this.statusSubscription.unsubscribe();
+    stopRunning() {
+      this.runningApps.set([]);
+      
+      // Stop all polling timers
+      this.statusSubscriptions.forEach(sub => sub.unsubscribe());
+      this.statusSubscriptions.clear();
     }
-  }
-  
+    
   uninstallApp(id: string): Observable<void> {
     return this.http.get<void>(
       `${this.apiBaseUrl}/uninstall-app/${id}`,

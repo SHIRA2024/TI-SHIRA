@@ -300,4 +300,26 @@ private getVersionIndex(version: string): number {
 
   return `${version}`;
 }
+
+/**
+   * Refresh the app using the existing service method
+   */
+  refreshAppById(): void {
+    const app = this.app();
+    if (!app) return;
+
+    this.loading.set(true);
+
+    // Directly calling your service's existing method
+    this.appService.getAppById(app.id).subscribe({
+      next: (updatedApp) => {
+        this.app.set(updatedApp);
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Refresh failed', error);
+        this.loading.set(false);
+      }
+    });
+  }
 }

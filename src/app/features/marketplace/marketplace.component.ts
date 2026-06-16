@@ -248,5 +248,10 @@ export class MarketplaceComponent implements OnInit {
   get updateAvailableCount(): number {
     return this.apps().filter(app => app.status === AppStatus.UpdateAvailable).length;
   }
+
+  refreshApps(): void {
+    // this method uses the AppService's refreshApps method to create a refresh button.
+    this.appService.refreshApps();
+  }
 }
 
