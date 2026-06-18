@@ -2,14 +2,6 @@
   <header class="navbar-header">
     <div class="header-content">
       <img src="/TI-Logos-RGB/One-Line/Reversed/ti_hz_1c_rev_rgb.svg" alt="Texas Instruments" class="navbar-logo" />
-      <nav class="navbar-nav">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
-          Marketplace
-        </a>
-        <a routerLink="/installed" routerLinkActive="active">
-          Installed Apps
-        </a>
-      </nav>
     </div>
   </header>
   
@@ -19,10 +11,11 @@
 </div> 
 
 <div class="running-overlays-container">
-  @for (runningApp of appService.runningApps(); track runningApp.id) {
+  @for (runningApp of appService.runningAppDetails(); track runningApp.id) {
     <div class="running-overlay">
       <span class="running-icon">🏃</span>
-      <span class="running-text"> {{ runningApp.name }} is running...</span>
+      <span class="running-text">{{ runningApp.name }} is running...</span>
+      <button class="stop-btn" (click)="appService.stopApp(runningApp.id)">✕</button>
     </div>
   }
 </div>

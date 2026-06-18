@@ -5,6 +5,9 @@
   padding: 1.5rem 2rem 2rem;
   box-sizing: border-box;
 }
+.top-nav-bar{
+  display: flex;
+}
 
 .back-button {
   color: #0f4c5c;
@@ -35,9 +38,7 @@
   color: #0b3a46;
 }
 
-/* =========================================
-   Skeleton Loading Animation
-   ========================================= */
+/* Skeleton loading animation */
 .skeleton-wrapper {
   display: flex;
   flex-direction: column;
@@ -47,9 +48,9 @@
 
 .skeleton-header {
   display: flex;
-  gap: 1.1rem;
-  padding: 1.15rem 1.25rem;
-  background: white;
+  gap: 1.75rem;
+  padding: 1.5rem;
+  background: #faf6f2;
   border: 1px solid #e5e7eb;
   border-radius: 1rem;
 }
@@ -112,54 +113,117 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-/* ========================================= */
+
 
 .app-details-header {
   display: flex;
-  gap: 1.1rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.75rem;
   margin-bottom: 1.2rem;
-  padding: 1.15rem 1.25rem;
-  background: white;
+  padding: 1.5rem;
+  background: #faf6f2;
   border: 1px solid #e5e7eb;
   border-radius: 1rem;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   animation: fadeIn 0.4s ease-out;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
 }
 
-.app-icon-large {
-  width: 100px; 
-  height: 100px;
-  flex-shrink: 0;
+.app-details-header:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
-.app-icon-image {
+.app-details-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/ti-red-logo.svg');
+  background-size: 55% auto;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.app-details-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover; 
-  border-radius: 16px; 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.35) 55%,
+    transparent 70%
+  );
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
 }
 
-.app-header-info {
+.app-details-header:hover::after {
+  transform: translateX(100%);
+}
+
+.card-top {
+  display: flex;
+  gap: 1.75rem;
+  align-items: center;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.card-name-area {
   flex: 1;
+  min-width: 0;
 }
 
-.app-title {
-  font-size: 2.1rem;
-  font-weight: 700;
-  color: #111827;
+.card-divider {
+  height: 1px;
+  background: #e5e7eb;
   margin: 0;
 }
 
+.card-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.5rem;
+}
+
+
+
+
+
+.app-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
 .hero-description {
-  color: #374151;
-  line-height: 1.6;
-  margin: 0.5rem 0 0;
+  color: black;
+  line-height: 1.5;
+  margin: 0 2rem 1rem 0;
 }
 
 .header-actions {
-  margin-left: auto;
+  align-self: flex-end;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-uninstall-header {
@@ -178,6 +242,102 @@
   background: #fef2f2;
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.1);
+}
+
+.btn-run-header {
+  background: var(--color-accent-dark);
+  color: white;
+  border: 1px solid var(--color-accent-dark);
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-run-header:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-green-header {
+  background: #29bf12;
+  color: white;
+  border: 1px solid #29bf12;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-green-header:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(41, 191, 18, 0.25);
+}
+
+.older-versions-card {
+  background: white;
+  border: 1px solid #e8ebef;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.04);
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.older-versions-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-accent-dark);
+  margin: 0 0 0.25rem;
+}
+
+.older-versions-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.older-version-picker {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.older-version-picker .custom-version-dropdown {
+  flex: 1;
+}
+
+.btn-download-older {
+  background: var(--color-accent-dark);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  min-height: 42px;
+}
+
+.btn-download-older:hover:not([disabled]) {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-download-older[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .app-details-content {
@@ -400,16 +560,12 @@
   .header-actions {
     width: 100%;
     margin-top: 1rem;
-  }
-  .btn-uninstall-header {
-    width: 100%;
-  }
-  .app-details-content {
-    grid-template-columns: 1fr;
-  }
-  .configuration-layout {
     flex-direction: column;
-    align-items: stretch;
+  }
+  .btn-uninstall-header,
+  .btn-run-header,
+  .btn-green-header {
+    width: 100%;
   }
 }
 
@@ -482,13 +638,6 @@ button.is-running {
 @keyframes runAnimation {
   0% { transform: translateY(0) rotate(0deg); }
   100% { transform: translateY(-2px) rotate(10deg); }
-}
-
-.app-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;      
-  margin-top: 0.5rem;
 }
 
 .app-version {

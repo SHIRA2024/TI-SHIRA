@@ -1,0 +1,9 @@
+<div class="logo-wrapper" [style.width.px]="size()" [style.height.px]="size()">
+  @if (iconUrl() && validIcon()) {
+    <img [src]="iconUrl()" [alt]="name() + ' icon'" class="logo-image" [style.width.px]="size()" [style.height.px]="size()" />
+  } @else {
+    <span class="logo-fallback" [style.width.px]="size()" [style.height.px]="size()" [style.fontSize.px]="size() * 0.4">
+      {{ name().charAt(0) | uppercase }}
+    </span>
+  }
+</div>

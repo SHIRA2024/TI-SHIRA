@@ -4,26 +4,7 @@ import { CommonModule } from '@angular/common';
 
 import { AppService } from '../../services/app.service';
 import { NotificationService } from '../../services/notification.service';
-/**
- * Navbar Component
- * 
- * Main layout/navigation component that provides the application shell with navigation and routing.
- * This component serves as the parent container for all feature views (marketplace,
- * installed apps, app details).
- * 
- * Architecture Role:
- * - Acts as the root layout/navbar component for authenticated/logged-in users
- * - Provides consistent navigation header across all views
- * - Contains router-outlet for child route components
- * - Handles top-level navigation between main sections
- * 
- * Navigation Structure:
- * - Marketplace: Browse and discover all available apps
- * - Installed Apps: View and manage installed applications
- * 
- * @component
- * @standalone This is a standalone component (Angular 17+)
- */
+/** Main layout/navigation component providing the app shell */
 @Component({
   selector: 'app-navbar',
   standalone: true,
@@ -38,42 +19,40 @@ export class NavbarComponent implements OnInit, OnDestroy {
    * Display name for the Connectivity Toolbox application.
    * Shown in the header navigation bar.
    */
-      title = 'Connectivity Toolbox';
-      toastMessage: string | null = null;
+  title = 'Connectivity Toolbox';
+  toastMessage: string | null = null;
 
-      constructor(
-        private ngZone: NgZone,
-        private cdr: ChangeDetectorRef,
-        public appService: AppService, 
-        public notificationService: NotificationService
-      ) {}
+  constructor(
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
+    public appService: AppService,
+    public notificationService: NotificationService
+  ) {}
 
-        private toastListener = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
+  private toastListener = (event: Event) => {
+    const customEvent = event as CustomEvent<string>;
+    this.ngZone.run(() => {
+      this.showToast(customEvent.detail);
+    });
+  };
 
+  ngOnInit(): void {
+    window.addEventListener('show-toast', this.toastListener);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('show-toast', this.toastListener);
+  }
+
+  showToast(message: string): void {
+    this.toastMessage = message;
+    this.cdr.detectChanges();
+    setTimeout(() => {
       this.ngZone.run(() => {
-        this.showToast(customEvent.detail);
+        this.toastMessage = null;
+        this.cdr.detectChanges();
       });
-    };
-
-        ngOnInit(): void {
-        window.addEventListener('show-toast', this.toastListener);
-      }
-
-      ngOnDestroy(): void {
-        window.removeEventListener('show-toast', this.toastListener);
-      }
-
-        showToast(message: string): void {
-          this.toastMessage = message;
-          this.cdr.detectChanges();
-
-          setTimeout(() => {
-            this.ngZone.run(() => {
-              this.toastMessage = null;
-              this.cdr.detectChanges();
-            });
-          }, 2500);
-        }
+    }, 2500);
+  }
 }
 

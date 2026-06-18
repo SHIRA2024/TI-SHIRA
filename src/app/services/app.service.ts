@@ -1,143 +1,129 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap, of, catchError, timer, Subscription, switchMap} from 'rxjs';
-import { App, AppStatus } from '../models/app.model';
+import { Observable, map, tap, of, catchError } from 'rxjs';
+import { App, AppStatus, WSMessage } from '../models/app.model';
 import { NotificationService } from './notification.service';
+import { NetworkService } from './network.service';
 
-/**
- * App Service
- * 
- */
+
+export interface OperationResult {
+  success: boolean;
+  message: string;
+}
+
+/** Core service for app data and API operations */
 @Injectable({
   providedIn: 'root'
 })
 export class AppService {
-  /**
-   * Backend base URL
-   */
   private readonly apiBaseUrl = 'http://localhost:5000/api';
   private apps = signal<App[]>([]);
 
-  // Stores a list of all currently running apps
-  runningApps = signal<{id: string, name: string}[]>([]);
+  runningApps = signal<string[]>([]);
+  launchingApps = signal<string[]>([]);
 
-  // Helper function to check if a specific app ID is currently running
+  runningAppDetails = computed(() =>
+    this.runningApps().map(id => ({
+      id,
+      name: this.apps().find(a => a.id === id)?.name ?? id
+    }))
+  );
+
   isAppRunning(id: string): boolean {
-    return this.runningApps().some(app => app.id === id);
+    return this.runningApps().includes(id);
   }
 
-  private statusSubscriptions = new Map<string, Subscription>();
+  isLaunching(id: string): boolean {
+    return this.launchingApps().includes(id);
+  }
 
-  constructor(private http: HttpClient, private notificationService: NotificationService) {}
+  constructor(
+    private http: HttpClient,
+    private notificationService: NotificationService,
+    private network: NetworkService
+  ) {
+    this.network.messages$.subscribe(msg => this.handleWSMessage(msg));
+    this.network.connect();
+  }
 
-  /**
-   * Get All Applications with Status Mapping
-   */
+  //////////////////////////////////////APP FETCHING ///////////////////////////////////////
+
+  /** Fetch all apps with status mapping */
   getApps(): Observable<App[]> {
-    // Fetch the raw JSON object from Python
     return this.http.get<any>(`${this.apiBaseUrl}/fetch-data`).pipe(
       map(backendData => {
-        
-        // Convert the Python dictionary { "1": {...} } into a standard array [{...}]
         const backendAppsArray = Object.values(backendData);
-
-        // Loop through the array and map each item to match the Angular App interface
-        return backendAppsArray.map((backendApp: any) => {
-          
-          //  THE FIX: Directly use the array sent by the backend, or default to an empty array if null
-          const sortedVersions = backendApp.versions || [];
-
-          // Translate Python status strings into Angular AppStatus Enums
-          let mappedStatus = AppStatus.Available; 
-          if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
-            mappedStatus = AppStatus.Installed;
+        const resApps:App[] = [];
+        backendAppsArray.forEach((backendApp:any)=>{
+          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
+            console.log(`The app: ${backendApp} is missing necessary props`)
+            return;
+          }
+          if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+            console.log(`The app with id: ${backendApp.id} has a wrong type of status`)
+            return;
+          }
+          let mappedStatus = AppStatus.UpToDate;
+          if (backendApp.status === 'not installed') {
+            mappedStatus = AppStatus.NotInstalled;
           } else if (backendApp.status === 'update available') {
             mappedStatus = AppStatus.UpdateAvailable;
-          } else {
-            mappedStatus = AppStatus.Available; 
           }
-
-          // Construct and return the final App object
-          return {
+          resApps.push({
             ...backendApp,
             id: String(backendApp.id),
-            versionOrder: sortedVersions,
-            version: sortedVersions.length > 0 ? sortedVersions[0] : '',
             status: mappedStatus,
-            iconPath: backendApp.iconPath ? `${this.apiBaseUrl.replace('/api', '')}/api/icons/${backendApp.id}/${backendApp.iconPath}` : null          } as App;
+          } as App);
+
         });
+        return resApps;
       }),
       tap((apps: App[]) => {
-        // Save the perfectly mapped array into the global cache
         this.apps.set(apps);
         console.log('Mapped apps ready for UI:', apps);
       }),
-      //  The new safety net for offline mode! 
-      catchError((error) => {
-        console.warn('Network fetch failed for ALL apps. Attempting to use local cache...');
-        
-        // Look inside our local signal memory
+      catchError((error:any) => {
+        console.error('An error occurred during fetch-data process: ',error);
         const cachedApps = this.apps();
-        
-        // Check if we already have apps saved in memory from a previous fetch
         if (cachedApps.length > 0) {
           console.log('Successfully recovered the apps list from cache!');
-          // Return the cached data so the marketplace UI doesn't break
-          return of(cachedApps); 
+          return of(cachedApps);
         }
-
         throw error;
-
-      })      
+      })
     );
   }
 
-    // Adds an app to the running list when launched
-  addRunningApp(id: string, name: string) {
-    // Check if it already exists to prevent duplicates
-    if (!this.isAppRunning(id)) {
-      this.runningApps.update(apps => [...apps, { id, name }]);
-    }
-  }
 
-  // Removes an app from the running list when closed
-  removeRunningApp(id: string) {
-    this.runningApps.update(apps => apps.filter(app => app.id !== id));
-  }
-  /**
-   * Get Application by ID (Network First, Fallback to Cache)
-   */
+  /** Fetch single app by ID with cache fallback */
   getAppById(id: string): Observable<App> {
-    
     return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
       map(backendApp => {
-        
-        // Directly use the array sent by the backend, or default to an empty array if null
-        const sortedVersions = backendApp.versions || [];
 
-        let mappedStatus = AppStatus.Available; 
-        if (backendApp.status === 'installed' || backendApp.status === 'up to date') {
-          mappedStatus = AppStatus.Installed;
+        if (!backendApp || typeof backendApp !== 'object' || Array.isArray(backendApp)) {
+          throw new Error(`Invalid response for app ${id}: expected an object, got ${typeof backendApp}`);
+        }
+        if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
+          throw new Error(`The app: ${backendApp} is missing necessary props`)
+        }
+        if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+          throw new Error(`The app with id: ${backendApp.id} has a wrong type of status`)  
+        }
+        let mappedStatus = AppStatus.UpToDate;
+        if (backendApp.status === 'not installed') {
+          mappedStatus = AppStatus.NotInstalled;
         } else if (backendApp.status === 'update available') {
           mappedStatus = AppStatus.UpdateAvailable;
-        } else {
-          mappedStatus = AppStatus.Available;
         }
-
         return {
-          ...backendApp,
-          id: String(backendApp.id),
-          versionOrder: sortedVersions,
-          version: sortedVersions.length > 0 ? sortedVersions[0] : '',
-          status: mappedStatus,
-          iconPath: backendApp.iconPath ? `${this.apiBaseUrl.replace('/api', '')}/api/icons/${backendApp.id}/${backendApp.iconPath}` : null
-        } as App;
-      }),
+            ...backendApp,
+            id: String(backendApp.id),
+            status: mappedStatus,
+          } as App
+      }), 
       tap((mappedApp: App) => {
-        // Update our local cache with this fresh data behind the scenes
         const currentApps = this.apps();
         const existingIndex = currentApps.findIndex(a => String(a.id) === String(id));
-        
         if (existingIndex >= 0) {
           const newApps = [...currentApps];
           newApps[existingIndex] = mappedApp;
@@ -147,151 +133,134 @@ export class AppService {
         }
       }),
       catchError((error) => {
-        // NETWORK FAILED! (Server offline, bad connection, etc.)
         console.warn(`Network fetch failed for app ${id}. Attempting to use local cache...`);
-        
-        // Look inside our local signal memory (from the marketplace fetch)
         const cachedApp = this.apps().find(a => String(a.id) === String(id));
-        
         if (cachedApp) {
           console.log(`Successfully recovered App ${id} from cache!`);
-          // Return the cached data so the UI doesn't break
           return of(cachedApp);
         }
-        
-        // FATAL ERROR: It's not on the server, and it's not in the cache.
         console.error(`App ${id} is completely missing.`);
         throw error;
       })
     );
   }
 
-  /**
-   * Refresh Apps From Backend
-   */
+//////////////////////////////////////APP LAUNCHING\CLOSING ///////////////////////////////////////
+
+  private handleWSMessage(msg: WSMessage): void {
+    switch (msg.type) {
+      case 'app-running':
+        if (msg.appId) {
+          this.launchingApps.update(list => list.filter(id => id !== msg.appId));
+          this.addRunningApp(msg.appId);
+        }
+        break;
+      case 'app-stopped':
+        if (msg.appId) this.removeRunningApp(msg.appId);
+        break;
+    }
+  }
+
+  launchApp(id: string, name: string): void {
+    this.network.send({ type: 'launch', appId: id });
+    this.launchingApps.update(list => [...list, id]);
+    setTimeout(() => {
+      if (this.isLaunching(id)) {
+        this.launchingApps.update(list => list.filter(a => a !== id));
+        this.notificationService.showError(`Failed to launch ${name}`);
+      }
+    }, 30000);
+  }
+
+  stopApp(id: string): void {
+    this.network.send({ type: 'stop', appId: id });
+  }
+  addRunningApp(id: string) {
+    if (!this.isAppRunning(id)) {
+      this.runningApps.update(list => [...list, id]);
+    }
+  }
+  addLaunchingApp(id: string) {
+    if (!this.isLaunching(id)) {
+      this.launchingApps.update(list => [...list, id]);
+    }
+  }
+
+  removeRunningApp(id: string) {
+    this.runningApps.update(list => list.filter(a => a !== id));
+  }
+  removeLaunchingApp(id: string) {
+    this.launchingApps.update(list => list.filter(a => a !== id));
+  }
+
+  
+//////////////////////////////////////APP INSTALL\UNINSTALL\UPDATE OPERATIONS ///////////////////////////////////////
+
+
+  installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/install-app/${id}/${targetVersion}`,
+      {}
+    ).pipe(
+      tap((response: OperationResult) => {
+        if (!response?.success) throw new Error(response?.message || 'Install failed');
+        this.updateAppInCache(id, { status: AppStatus.UpToDate, installedVersion: targetVersion });
+      })
+    );
+  }
+
+  
+
+  updateAppToVersion(id: string, targetVersion: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/update-app/${id}/${targetVersion}`,
+      {}
+    ).pipe(
+      tap((response: OperationResult) => {
+        if (!response?.success) throw new Error(response?.message || 'Update failed');
+        this.updateAppInCache(id, { status: AppStatus.UpToDate, installedVersion: targetVersion });
+      })
+    );
+  }
+
+
+  
+
+  uninstallApp(id: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/uninstall-app/${id}`,
+      {}
+    ).pipe(
+      tap((response:any)=>{
+        if (!response?.success||response.success!==true){
+          throw Error("Http response isn't successful")
+        }
+        this.updateAppInCache(id,{status:AppStatus.NotInstalled,installedVersion:null})
+      }),
+    );
+  }
+
+//////////////////////////////////////UTILITY FUNCTIONS ///////////////////////////////////////
+
+  /** Returns a read-only signal reference to the apps array */
+  getAppsSignal() {
+    return this.apps.asReadonly();
+  }
+
+   /** Refresh apps from backend */
   refreshApps(): void {
     this.getApps().subscribe({
       error: (error: unknown) => console.error('Failed to refresh apps', error)
     });
   }
-
-  
-
-  installApp(id: string): Observable<void> {
-    const app = this.apps().find((a) => a.id === id);
-
-    if (!app) {
-      throw new Error('App not found');
+  private updateAppInCache(id: string, changes: Partial<App>): void {
+    const currentApps = this.apps();
+    const index = currentApps.findIndex(a => String(a.id) === String(id));
+    if (index >= 0) {
+      const newApps = [...currentApps];
+      newApps[index] = { ...currentApps[index], ...changes };
+      this.apps.set(newApps);
     }
-
-    return this.installAppVersion(id, app.version, '');
   }
-
-  installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-    return this.http.get<void>(
-      `${this.apiBaseUrl}/install-app/${id}/${targetVersion}`,
-      {}
-    ).pipe(
-      tap(() => this.refreshApps())
-    );
-  }
-
-  openApp(id: string): Observable<void> {
-    // Turn ON the running indicator
-    this.addRunningApp(id, this.apps().find(a => String(a.id) === String(id))?.name || '');
-
-    return this.http.get<void>(`${this.apiBaseUrl}/run-app/${id}`).pipe(
-      tap(() => {
-        //  Once the app successfully starts, begin polling the server!
-        this.startMonitoringProcess(id);
-      }),
-      catchError((error) => {
-        // Turn OFF the running indicator if it fails, and show error
-        this.removeRunningApp(id);
-        this.notificationService.showError('Error: Could not run the application.');
-        throw error;
-      })
-    );
-  }
-
-// This polls the Python server every 2 seconds
-  private startMonitoringProcess(id: string) {
-    // Clear any old monitor JUST FOR THIS APP
-    if (this.statusSubscriptions.has(id)) {
-      this.statusSubscriptions.get(id)?.unsubscribe();
-    }
-
-    // Ping the server every 2000 milliseconds (2 seconds)
-    const sub = timer(0, 2000).pipe(
-      // Asking Python: "Is it still running?" 
-      switchMap(() => this.http.get<{success: boolean, message: string, running: boolean}>(`${this.apiBaseUrl}/run-status/${id}`))
-    ).subscribe({
-      next: (response) => {
-        if (!response.running) {
-          // The app was closed! Hide the running man and clear its specific timer
-          this.removeRunningApp(id);
-          this.statusSubscriptions.get(id)?.unsubscribe();
-          this.statusSubscriptions.delete(id);
-        }
-      },
-      error: () => {
-        // If the server disconnects, turn off the UI indicator
-        this.removeRunningApp(id);
-        this.statusSubscriptions.get(id)?.unsubscribe();
-        this.statusSubscriptions.delete(id);
-      }
-    });
-
-    // Save this app's timer in the dictionary
-    this.statusSubscriptions.set(id, sub);
-  }
-
-    stopRunning() {
-      this.runningApps.set([]);
-      
-      // Stop all polling timers
-      this.statusSubscriptions.forEach(sub => sub.unsubscribe());
-      this.statusSubscriptions.clear();
-    }
-    
-  uninstallApp(id: string): Observable<void> {
-    return this.http.get<void>(
-      `${this.apiBaseUrl}/uninstall-app/${id}`,
-      {}
-    ).pipe(
-      tap(() => this.refreshApps())
-    );
-  }
-
-
-  updateApp(id: string): Observable<void> {
-    const app = this.apps().find((a) => a.id === id);
-
-    if (!app) {
-      throw new Error('App not found');
-    }
-
-    return this.updateAppToVersion(id, app.version, '');
-  }
-
-
-  updateAppToVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-    return this.http.get<void>(
-      `${this.apiBaseUrl}/update-app/${id}/${targetVersion}`,
-      {}
-    ).pipe(
-      tap(() => this.refreshApps())
-    );
-  }
-
-  /**
-   * Get Apps Signal (Read-Only)
-   * 
-   * Returns a read-only signal reference to the apps array.
-   */
-  getAppsSignal() {
-    return this.apps.asReadonly();
-  }
-
 }
 

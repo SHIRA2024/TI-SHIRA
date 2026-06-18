@@ -16,10 +16,7 @@
   } @else {
     <div class="apps-container">
       @for (app of apps(); track app.id) {
-        <app-card 
-          [app]="app"
-          (onUninstall)="onUninstall($event)"
-          (onUpdate)="onUpdate($event)" />
+        <app-card [app]="app" />
       }
     </div>
   }
