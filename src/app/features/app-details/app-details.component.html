@@ -1,139 +1,116 @@
 <div class="app-details-container">
-  <div class="back-link">
+  <div class="top-nav-bar">
     <a routerLink="/" class="back-button">
       <span class="back-arrow">←</span>
       <span>Back to Marketplace</span>
     </a>
+    <button class="refresh-btn" (click)="refreshApp()" title="Reload App" [disabled]="refreshBtnDisabled() || loading()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+    </button>
   </div>
 
-  <div class="app-details-header">
-    <div class="app-icon-large">
-      <span class="icon-placeholder">{{ app()!.name.charAt(0) }}</span>
+  @if (loading()) {
+    <div class="skeleton-wrapper">
+      <div class="skeleton-header">
+        <div class="skeleton-icon pulse"></div>
+        <div class="skeleton-header-text">
+          <div class="skeleton-title pulse"></div>
+          <div class="skeleton-desc pulse"></div>
+        </div>
+      </div>
     </div>
+  }
+    @else if (!app()) {
+    <div class="not-found">
+      <h2>App Not Found</h2>
+      <p>The app you're looking for doesn't exist or has been removed.</p>
+      <a routerLink="/" class="back-link">← Back to Marketplace</a>
+    </div>
+  }
 
-    <div class="app-header-info">
-      <div class="app-title-row">
-        <h1 class="app-title">{{ app()!.name }}</h1>
+  @else {
+    <div class="app-details-header">
+      <div class="card-top">
+        <app-logo [iconUrl]="app()!.iconUrl" [name]="app()!.name" [size]="100" />
+
+        <div class="card-name-area">
+          <h1 class="app-title">{{ app()!.name }}</h1>
+          <p class="hero-description">{{ app()!.description }}</p>
+          <div class="card-info-row">
+            <span class="app-version">
+              Current Version: {{ app()!.installedVersion ?? app()!.latestVersion }}
+            </span>
+
+            @if (app()!.installedVersion && app()!.versions?.[0] && app()!.installedVersion === app()!.versions![0]) {
+            <span class="latest-badge">Latest</span>
+            }
+          </div>
+        </div>
       </div>
 
-      <p class="hero-description">
-        {{ app()!.description }}
-      </p>
-    </div>
-  </div>
+      <div class="card-divider"></div>
 
-  <div class="app-details-content">
-    <div class="app-details-main">
-      <section class="app-section">
-        <div class="section-header">
-          <h2>Description</h2>
-        </div>
-
-        <p class="app-description">{{ app()!.description }}</p>
-      </section>
-
-      <section class="app-section">
-        <div class="section-header">
-          <h2>Details</h2>
-        </div>
-
-        <dl>
-        
-          @if (app()!.installedVersion) {
-            <div class="detail-item">
-              <dt>Installed Version</dt>
-              <dd>{{ app()!.installedVersion }}</dd>
-            </div>
-          }
-         
-        </dl>
-      </section>
-    </div>
-
-    <aside class="app-details-sidebar">
-      <div class="action-panel">
-        <div class="action-panel-top">
-          <h3>Actions</h3>
-        </div>
-
-        @if (canChooseVersion) {
-          <div class="version-dropdown">
-            <div class="version-selector">
-              <label>Version</label>
-
-              <div class="custom-version-dropdown">
-                <button
-                  class="custom-version-button"
-                  type="button"
-                  (click)="toggleVersions()">
-
-                  {{ selectedVersion ? getVersionButtonLabel(selectedVersion) : 'Select version' }}
-                  <span [class.open]="showVersions">▼</span>
-                </button>
-
-                @if (showVersions) {
-                  <div class="custom-version-menu">
-                    @for (version of versionOptions; track version) {
-                      <button
-                        class="custom-version-item"
-                        type="button"
-                        (click)="handleVersionChange(version)">
-                        {{ getVersionButtonLabel(version) }}
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-
-          <button
-            class="btn btn-warning btn-large update-btn"
-            [disabled]="!canRunPrimaryAction"
-            (click)="handlePrimaryVersionAction()">
-            {{ primaryActionLabel }}
+      <div class="header-actions">
+        @if (canInstallLatest) {
+          <button class="btn-green-header" [disabled]="actionInProgress() !== null" (click)="handleInstallLatest()">
+            {{ actionInProgress() === 'install-latest' ? 'Installing...' : 'Install latest version' }}
           </button>
-            <div class="os-selector">
-              <label for="os-select">Operating System</label>
-
-              <select
-                id="os-select"
-                [(ngModel)]="selectedOS"
-                [disabled]="!selectedVersion">
-
-                <option [ngValue]="null">
-                  Select operating system
-                </option>
-
-                @for (os of availableOperatingSystems; track os) {
-                  <option [ngValue]="os">{{ os }}</option>
-                }
-              </select>
-            </div>
-
-          </div>
         }
 
         @if (canUninstall) {
-          <button
-            class="btn btn-danger btn-large"
-            [disabled]="actionInProgress() !== null"
-            (click)="handleUninstall()">
-            @if (actionInProgress() === 'uninstall') {
-              Uninstalling...
-            } @else {
-              Uninstall
-            }
+          <button class="btn-uninstall-header" [disabled]="actionInProgress() !== null" (click)="handleUninstall()">
+            {{ actionInProgress() === 'uninstall' ? 'Uninstalling...' : 'Uninstall App' }}
           </button>
-        }
 
-        @if (isInstalled) {
-          <button
-            class="btn btn-secondary btn-large"
-            (click)="handleLaunch()">
-            Run
-          </button>
+          @if (canUpdateToLatest) {
+            <button class="btn-green-header" [disabled]="actionInProgress() !== null" (click)="handleUpdateToLatest()">
+              {{ actionInProgress() === 'update-latest' ? 'Updating...' : 'Update to latest version' }}
+            </button>
+          }
+
+          @if (isLaunching) {
+            <button class="btn-run-header" disabled>Launching...</button>
+          } @else if (isRunning) {
+            <button class="btn-run-header" (click)="handleStop()">Stop</button>
+          } @else {
+            <button class="btn-run-header" [disabled]="actionInProgress() !== null" (click)="handleLaunch()">
+              Launch
+            </button>
+          }
         }
       </div>
-    </aside>
-  </div>
+    </div>
+
+    <div class="app-details-content">
+      @if (canChooseVersion) {
+        <section class="app-section older-versions-card">
+          <h2 class="older-versions-heading">Try other versions of the app</h2>
+          <p class="older-versions-subtitle">Select a previous version to install.</p>
+          <div class="older-version-picker">
+            <div class="custom-version-dropdown">
+              <button class="custom-version-button" type="button" (click)="toggleVersions()">
+                <span>{{ selectedVersion ? selectedVersion : 'Select version' }}</span>
+                <span class="selector-arrow">▼</span>
+              </button>
+              @if (showVersions) {
+                <div class="custom-version-menu">
+                  @for (version of olderVersions; track version) {
+                    <button class="custom-version-item" type="button" (click)="handleVersionChange(version)">
+                      {{ version }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <button class="btn-download-older" [disabled]="!selectedVersion || actionInProgress() !== null" (click)="handleDownloadOlderVersion()">
+              {{ actionInProgress() === 'download' ? 'Downloading...' : 'Download' }}
+            </button>
+          </div>
+        </section>
+      }
+    </div>
+  }
 </div>

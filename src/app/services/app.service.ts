@@ -1,553 +1,334 @@
-import { Injectable, signal } from '@angular/core';
-import { Observable, of, delay } from 'rxjs';
-import { App, AppStatus } from '../models/app.model';
+import { Injectable, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map, tap, of, catchError, Subscription } from 'rxjs';
+import { App, AppStatus, WSMessage } from '../models/app.model';
+import { NotificationService } from './notification.service';
+import { NetworkService } from './network.service';
 
-/**
- * App Service
- * 
- * Central service for managing application data and operations in the Connectivity Toolbox.
- * This service acts as the single source of truth for app state and provides methods
- * for installing, updating, and uninstalling apps.
- * 
- * Architecture Notes:
- * - Uses Angular signals for reactive state management
- * - Simulates API calls with Observable patterns and delays
- * - Persists state to localStorage for demonstration purposes
- * - In a production environment, this would make HTTP calls to a backend API
- * 
- * @injectable Provided at root level for singleton behavior across the application
- */
+
+export interface OperationResult {
+  success: boolean;
+  message: string;
+}
+
+/** Core service for app data and API operations */
 @Injectable({
   providedIn: 'root'
 })
 export class AppService {
-  /**
-   * Mock Application Data
-   * 
-   * Sample applications for demonstration purposes. In a production environment,
-   * this data would be fetched from a backend API endpoint.
-   * 
-   * The mock data includes various app statuses to demonstrate all functionality:
-   * - Installed apps (with and without updates)
-   * - Available apps (not yet installed)
-   * - Apps with updates available
-   */
-  private mockApps: App[] = [
-    {
-      id: '1',
-      name: 'Network Analyzer',
-      version: '2.1.0',
-      description: 'Advanced network analysis tool for troubleshooting connectivity issues.',
-      status: AppStatus.Installed,
-      installedVersion: '2.0.5',
-      versionOrder: ['2.1.0', '2.0.5', '2.0.0'],
-      versions: {
-        '2.1.0': ['Windows', 'Linux'],
-        '2.0.5': ['Windows', 'Linux', 'macOS'],
-        '2.0.0': ['Windows', 'Linux', 'macOS']
-      },
-    },
+  private readonly apiBaseUrl = 'http://localhost:5000/api';
+  private apps = signal<App[]>([]);
+  private runningAppsSub : Subscription|null = null
+  runningApps = signal<string[]>([]);
+  launchingApps = signal<string[]>([]);
 
-    {
-      id: '2',
-      name: 'API Gateway Manager',
-      version: '1.5.2',
-      description: 'Manage and monitor API gateway configurations and endpoints.',
-      status: AppStatus.Available,
-      versionOrder: [
-        '1.5.2', '1.5.1', '1.5.0', '1.4.9', '1.4.8',
-        '1.4.7', '1.4.6', '1.4.5', '1.4.4', '1.4.3',
-        '1.4.2', '1.4.1', '1.4.0', '1.3.9', '1.3.8',
-        '1.3.7', '1.3.6', '1.3.5', '1.3.4', '1.3.3',
-        '1.3.2', '1.3.1', '1.3.0', '1.2.9', '1.2.8',
-        '1.2.7', '1.2.6', '1.2.5', '1.2.4', '1.2.3'
-      ],
-      versions: {
-        '1.5.2': ['Windows', 'macOS'],
-        '1.5.1': ['Windows'],
-        '1.5.0': ['macOS'],
-        '1.4.9': ['Linux'],
-        '1.4.8': ['Windows', 'Linux'],
-        '1.4.7': ['macOS', 'Linux'],
-        '1.4.6': ['Windows', 'macOS', 'Linux'],
-        '1.4.5': ['Windows'],
-        '1.4.4': ['macOS'],
-        '1.4.3': ['Linux'],
-        '1.4.2': ['Windows', 'Linux'],
-        '1.4.1': ['Windows', 'macOS'],
-        '1.4.0': ['Windows', 'macOS', 'Linux'],
-        '1.3.9': ['Linux'],
-        '1.3.8': ['Windows'],
-        '1.3.7': ['macOS'],
-        '1.3.6': ['Windows', 'Linux'],
-        '1.3.5': ['macOS', 'Linux'],
-        '1.3.4': ['Windows', 'macOS', 'Linux'],
-        '1.3.3': ['Windows'],
-        '1.3.2': ['Linux'],
-        '1.3.1': ['macOS'],
-        '1.3.0': ['Windows', 'Linux'],
-        '1.2.9': ['Windows', 'macOS'],
-        '1.2.8': ['Linux'],
-        '1.2.7': ['Windows'],
-        '1.2.6': ['macOS'],
-        '1.2.5': ['Windows', 'Linux'],
-        '1.2.4': ['macOS', 'Linux'],
-        '1.2.3': ['Windows', 'macOS', 'Linux']
-      }
-    },
-    {
-      id: '3',
-      name: 'Database Monitor',
-      version: '3.0.0',
-      description: 'Real-time database performance monitoring and query analysis.',
-      status: AppStatus.UpdateAvailable,
-      installedVersion: '2.9.1',
-      versionOrder: ['3.0.0', '2.9.1', '2.9.0'],
-      versions: {
-        '3.0.0': ['Linux'],
-        '2.9.1': ['Linux'],
-        '2.9.0': ['Linux']
-      }
-    },
-    {
-      id: '4',
-      name: 'Log Aggregator',
-      version: '1.2.3',
-      description: 'Centralized log collection and analysis across all services.',
-      status: AppStatus.Installed,
-      installedVersion: '1.2.3',
-      versionOrder: ['1.2.3', '1.2.2', '1.2.0'],
-      versions: {
-        '1.2.3': ['Windows', 'macOS', 'Linux'],
-        '1.2.2': ['Windows', 'macOS', 'Linux'],
-        '1.2.0': ['Windows', 'macOS', 'Linux']
-      }
+  runningAppDetails = computed(() =>
+    this.runningApps().map(id => ({
+      id,
+      name: this.apps().find(a => a.id === id)?.name ?? id
+    }))
+  );
 
-    },
-      {
-      id: '5',
-      name: 'Security Scanner',
-      version: '2.3.1',
-      description: 'Automated security vulnerability scanning and reporting.',
-      status: AppStatus.Available,
-      versionOrder: ['2.3.1', '2.3.0', '2.2.5', '2.2.0', '2.1.5', '2.1.0'],
-      versions: {
-        '2.3.1': ['Windows', 'macOS'],
-        '2.3.0': ['Windows', 'Linux'],
-        '2.2.5': ['Linux'],
-        '2.2.0': ['Windows', 'macOS', 'Linux'],
-        '2.1.5': ['macOS'],
-        '2.1.0': ['Windows']
-      }
-    },
-    {
-      id: '6',
-      name: 'Performance Profiler',
-      version: '1.8.0',
-      description: 'Application performance profiling and bottleneck identification.',
-      status: AppStatus.UpdateAvailable,
-      installedVersion: '1.8.0',
-      versionOrder  : ['1.8.0', '1.7.5', '1.7.0'],
-      versions: {
-        '1.8.0': ['Windows', 'macOS', 'Linux'],
-        '1.7.5': ['Windows', 'macOS', 'Linux'],
-        '1.7.0': ['Windows', 'macOS', 'Linux']
-      }
-    }, 
-    {
-      id: '7',
-      name: 'Cache Manager',
-      version: '2.4.0',
-      description: 'Manage distributed cache settings and monitor cache health.',
-      status: AppStatus.Available,
-      versionOrder: ['2.4.0', '2.3.5', '2.3.0'],
-      versions: {
-        '2.4.0': ['Windows', 'Linux'],
-        '2.3.5': ['Windows', 'Linux'],
-        '2.3.0': ['Windows', 'Linux']
-      }
+  isAppRunning(id: string): boolean {
+    return this.runningApps().includes(id);
+  }
 
-    },
+  isLaunching(id: string): boolean {
+    return this.launchingApps().includes(id);
+  }
 
-    {
-      id: '8',
-      name: 'Release Dashboard',
-      version: '1.9.2',
-      description: 'Track deployments, release readiness, and version rollout status.',
-      status: AppStatus.Installed,
-      installedVersion: '1.9.2',
-      versionOrder: ['1.9.2', '1.9.0', '1.8.5'],
-      versions: {
-        '1.9.2': ['Windows', 'macOS', 'Linux'],
-        '1.9.0': ['Windows', 'macOS', 'Linux'],
-        '1.8.5': ['Windows', 'macOS', 'Linux']
-      }
+  constructor(
+    private http: HttpClient,
+    private notificationService: NotificationService,
+    private network: NetworkService
+  ) {
+    this.runningAppsSub = this.network.onEvent<WSMessage>('server_response').subscribe({
+      next:(message:WSMessage)=> {this.handleWSMessage(message)},
+      error:(err:unknown)=>{console.error('Error: ',err)}
+    });
+    this.network.emitEvent("client_message",{type:"status"});
+  }
+
+  //////////////////////////////////////APP FETCHING ///////////////////////////////////////
+
+  initialFetch(): Observable<App[]> {
+    return this.http.get<any>(`${this.apiBaseUrl}/initial-fetch`).pipe(
+      map(backendData => {
+        const backendAppsArray = Object.values(backendData);
+        const resApps:App[] = [];
+        backendAppsArray.forEach((backendApp:any)=>{
+          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion||!backendApp.versions||!backendApp.supportedOS) {
+            console.log(`The app: ${backendApp} is missing necessary props`)
+            return;
+          }
+          if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+            console.log(`The app with id: ${backendApp.id} has a wrong type of status`)
+            return;
+          }
+          let mappedStatus = AppStatus.UpToDate;
+          if (backendApp.status === 'not installed') {
+            mappedStatus = AppStatus.NotInstalled;
+          } else if (backendApp.status === 'update available') {
+            mappedStatus = AppStatus.UpdateAvailable;
+          }
+          resApps.push({
+            ...backendApp,
+            id: String(backendApp.id),
+            status: mappedStatus,
+          } as App);
+
+        });
+        return resApps;
+      }),
+      tap((apps: App[]) => {
+        this.apps.set(apps);
+        console.log('Mapped apps ready for UI:', apps);
+      }),
+      catchError((error:any) => {
+        console.error('An error occurred during fetch-data process: ',error);
+        const cachedApps = this.apps();
+        if (cachedApps.length > 0) {
+          console.log('Successfully recovered the apps list from cache!');
+          return of(cachedApps);
+        }
+        throw error;
+      })
+    );
+  }
+
+  /** Fetch all apps with status mapping */
+  fetchData(): Observable<App[]> {
+    return this.http.get<any>(`${this.apiBaseUrl}/fetch-data`).pipe(
+      map(backendData => {
+        const backendAppsArray = Object.values(backendData);
+        const resApps:App[] = [];
+        backendAppsArray.forEach((backendApp:any)=>{
+          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion||!backendApp.versions||!backendApp.supportedOS) {
+            console.log(`The app: ${backendApp} is missing necessary props`)
+            return;
+          }
+          if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+            console.log(`The app with id: ${backendApp.id} has a wrong type of status`)
+            return;
+          }
+          let mappedStatus = AppStatus.UpToDate;
+          if (backendApp.status === 'not installed') {
+            mappedStatus = AppStatus.NotInstalled;
+          } else if (backendApp.status === 'update available') {
+            mappedStatus = AppStatus.UpdateAvailable;
+          }
+          resApps.push({
+            ...backendApp,
+            id: String(backendApp.id),
+            status: mappedStatus,
+          } as App);
+
+        });
+        return resApps;
+      }),
+      tap((apps: App[]) => {
+        this.apps.set(apps);
+        console.log('Mapped apps ready for UI:', apps);
+      }),
+      catchError((error:any) => {
+        console.error('An error occurred during fetch-data process: ',error);
+        const cachedApps = this.apps();
+        if (cachedApps.length > 0) {
+          console.log('Successfully recovered the apps list from cache!');
+          return of(cachedApps);
+        }
+        throw error;
+      })
+    );
+  }
+
+  getAppById(appId:string){
+    return this.apps().find(app=>app.id==appId);
+  }
+
+  // /** Fetch single app by ID with cache fallback */
+  // getAppById(id: string): Observable<App> {
+  //   return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
+  //     map(backendApp => {
+
+  //       if (!backendApp || typeof backendApp !== 'object' || Array.isArray(backendApp)) {
+  //         throw new Error(`Invalid response for app ${id}: expected an object, got ${typeof backendApp}`);
+  //       }
+  //       if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
+  //         throw new Error(`The app: ${backendApp} is missing necessary props`)
+  //       }
+  //       if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+  //         throw new Error(`The app with id: ${backendApp.id} has a wrong type of status`)  
+  //       }
+  //       let mappedStatus = AppStatus.UpToDate;
+  //       if (backendApp.status === 'not installed') {
+  //         mappedStatus = AppStatus.NotInstalled;
+  //       } else if (backendApp.status === 'update available') {
+  //         mappedStatus = AppStatus.UpdateAvailable;
+  //       }
+  //       return {
+  //           ...backendApp,
+  //           id: String(backendApp.id),
+  //           status: mappedStatus,
+  //         } as App
+  //     }), 
+  //     tap((mappedApp: App) => {
+  //       const currentApps = this.apps();
+  //       const existingIndex = currentApps.findIndex(a => String(a.id) === String(id));
+  //       if (existingIndex >= 0) {
+  //         const newApps = [...currentApps];
+  //         newApps[existingIndex] = mappedApp;
+  //         this.apps.set(newApps);
+  //       } else {
+  //         this.apps.set([...currentApps, mappedApp]);
+  //       }
+  //     }),
+  //     catchError((error) => {
+  //       console.warn(`Network fetch failed for app ${id}. Attempting to use local cache...`);
+  //       const cachedApp = this.apps().find(a => String(a.id) === String(id));
+  //       if (cachedApp) {
+  //         console.log(`Successfully recovered App ${id} from cache!`);
+  //         return of(cachedApp);
+  //       }
+  //       console.error(`App ${id} is completely missing.`);
+  //       throw error;
+  //     })
+  //   );
+  // }
+
+//////////////////////////////////////APP LAUNCHING\CLOSING ///////////////////////////////////////
+
+  private handleWSMessage(msg: WSMessage): void {
+    switch (msg.type) {
+      case 'app-running':
+        if (msg.appId) {
+          this.removeLaunchingApp(msg.appId)
+          this.addRunningApp(msg.appId);
+        }
+        break;
+      case 'app-stopped':
+        if (msg.appId) this.removeRunningApp(msg.appId);
+        break;
+      case 'running-apps':
+        this.runningApps.set([]);
+        msg.appIds.forEach(id=>{
+          if(this.getAppById(id))
+            this.runningApps().push(id);
+        });
+        console.log(this.runningApps());
     }
+  }
 
-  ];
-
-  /**
-   * Reactive State Signal
-   * 
-   * Angular signal containing the current list of all applications.
-   * Signals provide reactive updates - components can reactively respond to changes.
-   * 
-   * Using signals instead of BehaviorSubject provides:
-   * - Better integration with Angular's change detection
-   * - Simpler API for reading/writing values
-   * - Automatic dependency tracking
-   */
-  private apps = signal<App[]>(this.mockApps);
-
-  /**
-   * Constructor
-   * 
-   * Initializes the service and attempts to load persisted app state from localStorage.
-   * This simulates persistence across page refreshes. In production, this would
-   * typically fetch initial data from an API endpoint.
-   */
-    constructor() {
-      const savedApps = localStorage.getItem('connectivity-toolbox-apps');
-
-      if (savedApps) {
-        try {
-          const parsed: App[] = JSON.parse(savedApps);
-
-          const mergedApps = this.mockApps.map(mockApp => {
-            const savedApp = parsed.find(app => app.id === mockApp.id);
-            return savedApp ? { ...mockApp, ...savedApp } : mockApp;
-          });
-
-          this.apps.set(mergedApps);
-          this.saveToLocalStorage();
-        } catch (e) {
-          console.error('Failed to load apps from localStorage', e);
-          this.apps.set(this.mockApps);
-        }
-      } else {
-        this.apps.set(this.mockApps);
+  launchApp(id: string, name: string): void {
+    this.network.emitEvent('client_message',{ type: 'launch', appId: id })
+    this.addLaunchingApp(id);
+    setTimeout(() => {
+      if (this.isLaunching(id)) {
+        this.removeLaunchingApp(id);
+        this.notificationService.showError(`Failed to launch ${name}`);
       }
+    }, 30000);
+  }
+
+  stopApp(id: string): void {
+    this.network.emitEvent('client_message',{ type: 'stop', appId: id }) 
+  }
+  addRunningApp(id: string) {
+    if (!this.isAppRunning(id)) {
+      this.runningApps.update(list => [...list, id]);
     }
-
-  /**
-   * Get All Applications
-   * 
-   * Retrieves the complete list of applications from the service.
-   * Returns an Observable to simulate an async API call.
-   * 
-   * @returns {Observable<App[]>} Observable that emits the array of all apps
-   * 
-   * Usage:
-   * ```typescript
-   * this.appService.getApps().subscribe(apps => {
-   *   // Handle apps array
-   * });
-   * ```
-   */
-  getApps(): Observable<App[]> {
-    // Simulate network delay (300ms) to mimic real API behavior
-    return of(this.apps()).pipe(delay(300));
+  }
+  addLaunchingApp(id: string) {
+    if (!this.isLaunching(id)) {
+      this.launchingApps.update(list => [...list, id]);
+    }
   }
 
-  /**
-   * Get Application by ID
-   * 
-   * Retrieves a single application by its unique identifier.
-   * Useful for detail views and operations on specific apps.
-   * 
-   * @param {string} id - The unique identifier of the app to retrieve
-   * @returns {Observable<App | undefined>} Observable that emits the app if found, or undefined
-   * 
-   * Usage:
-   * ```typescript
-   * this.appService.getAppById('1').subscribe(app => {
-   *   if (app) {
-   *     // App found
-   *   }
-   * });
-   * ```
-   */
-  getAppById(id: string): Observable<App | undefined> {
-    const app = this.apps().find(a => a.id === id);
-    // Simulate shorter delay for single-item fetch
-    return of(app).pipe(delay(200));
+  removeRunningApp(id: string) {
+    this.runningApps.update(list => list.filter(a => a !== id));
+  }
+  removeLaunchingApp(id: string) {
+    this.launchingApps.update(list => list.filter(a => a !== id));
   }
 
-  /**
-   * Install Application
-   * 
-   * Installs an application by updating its status to 'Installed' and setting
-   * the installedVersion to match the current version.
-   * 
-   * Business Logic:
-   * - Changes app status from 'Available' to 'Installed'
-   * - Records the installed version for future update detection
-   * - Persists the change to localStorage
-   * 
-   * @param {string} id - The unique identifier of the app to install
-   * @returns {Observable<App>} Observable that emits the updated app on success
-   * @throws {Error} If the app is not found
-   * 
-   * Usage:
-   * ```typescript
-   * this.appService.installApp('1').subscribe({
-   *   next: (app) => console.log('Installed:', app.name),
-   *   error: (err) => console.error('Installation failed:', err)
-   * });
-   * ```
-   */
-  installApp(id: string): Observable<void> {
-    return new Observable(observer => {
-      // Simulate installation process delay (500ms)
-      setTimeout(() => {
-        const app = this.apps().find(a => a.id === id);
-        if (app) {
-          // Create updated app object with new status
-          const updatedApp: App = {
-            ...app,
-            status: AppStatus.Installed,
-            installedVersion: app.version // Record the version being installed
-          };
-          this.updateAppInArray(updatedApp);
-          this.saveToLocalStorage();
-          observer.next();
-          observer.complete();
-        } else {
-          observer.error(new Error('App not found'));
+  
+//////////////////////////////////////APP INSTALL\UNINSTALL\UPDATE OPERATIONS ///////////////////////////////////////
+
+
+  installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/install-app/${id}/${targetVersion}`,
+      {}
+    ).pipe(
+      tap((response: OperationResult) => {
+        if (!response?.success) throw new Error(response?.message || 'Install failed');
+        const currentApps = this.apps();
+        const index = currentApps.findIndex(a => String(a.id) === String(id));
+        if(index>=0)
+          this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
+      })
+    );
+  }
+
+  
+
+  updateAppToVersion(id: string, targetVersion: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/update-app/${id}/${targetVersion}`,
+      {}
+    ).pipe(
+      tap((response: OperationResult) => {
+        if (!response?.success) throw new Error(response?.message || 'Update failed');
+        const currentApps = this.apps();
+        const index = currentApps.findIndex(a => String(a.id) === String(id));
+        if(index>=0)
+          this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
+      })
+    );
+  }
+
+
+  
+
+  uninstallApp(id: string): Observable<OperationResult> {
+    return this.http.get<OperationResult>(
+      `${this.apiBaseUrl}/uninstall-app/${id}`,
+      {}
+    ).pipe(
+      tap((response:any)=>{
+        if (!response?.success||response.success!==true){
+          throw Error("Http response isn't successful")
         }
-      }, 500);
-    });
+        this.updateAppInCache(id,{status:AppStatus.NotInstalled,installedVersion:null})
+      }),
+    );
   }
 
-  installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-  return new Observable<void>(observer => {
-    setTimeout(() => {
-      const app = this.apps().find(a => a.id === id);
+//////////////////////////////////////UTILITY FUNCTIONS ///////////////////////////////////////
 
-      if (!app) {
-        observer.error(new Error('App not found'));
-        return;
-      }
-
-      const supportedOS = app.versions[targetVersion] || [];
-
-      if (!supportedOS.includes(targetOS)) {
-        observer.error(new Error('Selected OS is not supported for this version'));
-        return;
-      }
-
-      const updatedApp: App = {
-        ...app,
-        status: targetVersion === app.version
-          ? AppStatus.Installed
-          : AppStatus.UpdateAvailable,
-        installedVersion: targetVersion,
-        installedOS: targetOS
-      };
-
-      this.updateAppInArray(updatedApp);
-      this.saveToLocalStorage();
-
-      observer.next();
-      observer.complete();
-    }, 500);
-  });
-}
-
-  /**
-   * Uninstall Application
-   * 
-   * Removes an installed application by resetting its status to 'Available'
-   * and clearing the installedVersion field.
-   * 
-   * Business Logic:
-   * - Changes app status from 'Installed' to 'Available'
-   * - Removes installedVersion to indicate no installation
-   * - Persists the change to localStorage
-   * 
-   * @param {string} id - The unique identifier of the app to uninstall
-   * @returns {Observable<void>} Observable that completes on success
-   * @throws {Error} If the app is not found
-   * 
-   * Usage:
-   * ```typescript
-   * this.appService.uninstallApp('1').subscribe({
-   *   next: () => console.log('Uninstalled successfully'),
-   *   error: (err) => console.error('Uninstallation failed:', err)
-   * });
-   * ```
-   */
-  uninstallApp(id: string): Observable<void> {
-    return new Observable(observer => {
-      // Simulate uninstallation process delay (400ms)
-      setTimeout(() => {
-        const app = this.apps().find(a => a.id === id);
-        if (app) {
-          // Reset app to available state
-          const updatedApp: App = {
-            ...app,
-            status: AppStatus.Available,
-            installedVersion: undefined // Clear installed version
-          };
-          this.updateAppInArray(updatedApp);
-          this.saveToLocalStorage();
-          observer.next();
-          observer.complete();
-        } else {
-          observer.error(new Error('App not found'));
-        }
-      }, 400);
-    });
-  }
-
-  /**
-   * Update Application to Latest Version
-   * 
-   * Updates an installed application to the latest available version.
-   * Only works for apps with status 'UpdateAvailable'.
-   * 
-   * Business Logic:
-   * - Validates that the app has an update available
-   * - Updates status from 'UpdateAvailable' to 'Installed'
-   * - Updates installedVersion to match the current version
-   * - Persists the change to localStorage
-   * 
-   * @param {string} id - The unique identifier of the app to update
-   * @returns {Observable<App>} Observable that emits the updated app on success
-   * @throws {Error} If the app is not found or update is not available
-   * 
-   * Usage:
-   * ```typescript
-   * this.appService.updateApp('1').subscribe({
-   *   next: (app) => console.log('Updated to:', app.version),
-   *   error: (err) => console.error('Update failed:', err)
-   * });
-   * ```
-   */
-  updateApp(id: string): Observable<void> {
-    return new Observable(observer => {
-      // Simulate update process delay (600ms - typically longer than install)
-      setTimeout(() => {
-        const app = this.apps().find(a => a.id === id);
-        // Only allow updates for apps with UpdateAvailable status
-        if (app && app.status === AppStatus.UpdateAvailable) {
-          const updatedApp: App = {
-            ...app,
-            status: AppStatus.Installed,
-            installedVersion: app.version // Update to latest version
-          };
-          this.updateAppInArray(updatedApp);
-          this.saveToLocalStorage();
-          observer.next();
-          observer.complete();
-        } else {
-          observer.error(new Error('App update not available'));
-        }
-      }, 600);
-    });
-  }
-
-  updateAppToVersion(id: string, targetVersion: string, targetOS: string): Observable<void> {
-  return new Observable<void>(observer => {
-    setTimeout(() => {
-      const currentApps = this.apps();
-      const appIndex = currentApps.findIndex(app => app.id === id);
-
-      if (appIndex === -1) {
-        observer.error(new Error('App not found'));
-        return;
-      }
-
-      const app = currentApps[appIndex];
-      const supportedOS = app.versions[targetVersion] || [];
-
-      if (!supportedOS.includes(targetOS)) {
-        observer.error(new Error('Selected OS is not supported for this version'));
-        return;
-      }
-
-      const updatedApp: App = {
-        ...app,
-        installedVersion: targetVersion,
-        installedOS: targetOS,
-        status: targetVersion === app.version
-          ? AppStatus.Installed
-          : AppStatus.UpdateAvailable
-      };
-
-      const updatedApps = [...currentApps];
-      updatedApps[appIndex] = updatedApp;
-
-      this.apps.set(updatedApps);
-      this.saveToLocalStorage();
-
-      observer.next();
-      observer.complete();
-    }, 500);
-  });
-}
-
-  /**
-   * Get Apps Signal (Read-Only)
-   * 
-   * Returns a read-only signal reference to the apps array.
-   * This allows components to reactively track changes to the apps list
-   * without being able to modify it directly.
-   * 
-   * Note: Currently not used in the implementation, but provided for
-   * potential future reactive patterns using Angular effects.
-   * 
-   * @returns {ReadonlySignal<App[]>} Read-only signal reference to apps array
-   */
+  /** Returns a read-only signal reference to the apps array */
   getAppsSignal() {
     return this.apps.asReadonly();
   }
 
-  /**
-   * Internal: Update App in Array
-   * 
-   * Private helper method that updates a specific app in the apps signal.
-   * Uses immutable update pattern to ensure Angular change detection works correctly.
-   * 
-   * Implementation Details:
-   * - Creates a new array instead of mutating the existing one
-   * - Finds the app by ID and replaces it with the updated version
-   * - Updates the signal with the new array reference
-   * 
-   * @private
-   * @param {App} updatedApp - The app object with updated properties
-   */
-  private updateAppInArray(updatedApp: App): void {
+  getAppStatus(installedVersion:string,latestVersion:string){
+    if(installedVersion===latestVersion){
+      return AppStatus.UpToDate
+    }
+    return AppStatus.UpdateAvailable
+  }
+
+  private updateAppInCache(id: string, changes: Partial<App>): void {
     const currentApps = this.apps();
-    const index = currentApps.findIndex(a => a.id === updatedApp.id);
-    if (index !== -1) {
-      // Immutable update: create new array with updated app
-      // todo: change from shallow copy to deep copy
+    const index = currentApps.findIndex(a => String(a.id) === String(id));
+    if (index >= 0) {
       const newApps = [...currentApps];
-      newApps[index] = updatedApp;
+      newApps[index] = { ...currentApps[index], ...changes };
       this.apps.set(newApps);
     }
   }
-
-  /**
-   * Internal: Persist to LocalStorage
-   * 
-   * Private helper method that saves the current app state to browser localStorage.
-   * This simulates persistence across page refreshes.
-   * 
-   * Error Handling:
-   * - Wraps in try-catch to handle localStorage quota exceeded errors
-   * - Logs errors but doesn't throw to prevent breaking the app
-   * 
-   * @private
-   */
-  private saveToLocalStorage(): void {
-    try {
-      localStorage.setItem('connectivity-toolbox-apps', JSON.stringify(this.apps()));
-    } catch (e) {
-      // localStorage might be full or disabled - log but don't break the app
-      console.error('Failed to save apps to localStorage', e);
-    }
+  ngOnDestroy(){
+    this.runningAppsSub?.unsubscribe()
   }
 }
 

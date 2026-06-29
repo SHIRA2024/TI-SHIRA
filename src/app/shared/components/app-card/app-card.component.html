@@ -1,44 +1,28 @@
 <div class="app-card">
- <div class="app-card-header">
-  <div class="app-icon">
-    <span class="icon-placeholder">{{ app().name.charAt(0) }}</span>
-  </div>
-
-  <div class="app-card-body">
-    <h3 class="app-name">{{ app().name }}</h3>
-    <p class="app-description">{{ app().description }}</p>
-    <div class="app-meta">
-          <span class="app-version">
-      v{{ app().installedVersion ?? app().version }}
-    </span>
+  <div class="card-content">
+    <div class="card-top">
+      <app-logo [iconUrl]="app().iconUrl" [name]="app().name" [size]="80" />
+      <div class="card-name-area">
+        <h3 #cardName class="card-name" [class.scroll]="hasOverflow" [style.--scroll-distance.px]="scrollDistance">{{ app().name }}</h3>
+      </div>
     </div>
+    <p class="card-description">{{ app().description }}</p>
+
+    <div class="card-divider"></div>
+
+    <div class="card-info-row">
+      <app-status-badge [status]="app().status" />
+      <span class="card-version">Latest: {{ app().latestVersion }}</span>
+    </div>
+
+    <div class="card-installed-row">
+      <span class="card-installed-label">Installed:</span>
+      <span class="card-installed-value">{{ app().installedVersion ?? 'None' }}</span>
+    </div>
+
+    <a [routerLink]="['/app', app().id]" class="card-details-link">
+      View Details
+      <span class="card-arrow">→</span>
+    </a>
   </div>
 </div>
-  
-<div class="app-card-footer">
-  <a [routerLink]="['/app', app().id]" class="details-link">
-  View Details
-  <span class="arrow">→</span>
-</a>
-
-  <div class="action-buttons">
-
-  @if (canInstall) {
-    <button class="btn btn-primary" (click)="handleInstall()">Install</button>
-  }
-
-  @if (canUpdate) {
-    <button class="btn btn-warning" (click)="handleUpdate()">Update</button>
-    <button class="btn btn-dark" (click)="handleRun()">Run</button>
-    <button class="btn btn-danger" (click)="handleUninstall()">Uninstall</button>
-  }
-
-  @if (canUninstall) {
-    <button class="btn btn-dark" (click)="handleRun()">Run</button>
-    <button class="btn btn-danger" (click)="handleUninstall()">Uninstall</button>
-  }
-
-  </div>
-</div>
-</div>
-

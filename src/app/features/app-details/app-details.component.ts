@@ -1,285 +1,283 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AppService } from '../../services/app.service';
 import { App, AppStatus } from '../../models/app.model';
-import { AppStatusBadgeComponent } from '../../shared/components/app-status-badge/app-status-badge.component';
+import { catchError } from 'rxjs';
+import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.component';
 
-/**
- * App Details Component
- * 
- * Displays full information about a selected application.
- * Allows install, update, uninstall, run, and version switching.
- */
+/** Full details view for an app with version management and actions */
 @Component({
   selector: 'app-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, AppStatusBadgeComponent, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, AppLogoComponent],
   templateUrl: './app-details.component.html',
   styleUrl: './app-details.component.css'
 })
 export class AppDetailsComponent implements OnInit {
 
-  /**
-   * Holds the current app being displayed
-   */
   app = signal<App | null>(null);
-
-  /**
-   * Indicates loading state
-   */
-  loading = signal<boolean>(true);
-
-  /**
-   * Tracks which action is currently running
-   */
+  loading = signal<boolean>(false);
+  refreshBtnDisabled = signal<boolean>(false)
+  refreshTimeoutId = signal<ReturnType<typeof setTimeout> | null>(null);
   actionInProgress = signal<string | null>(null);
-
-  /**
-   * Controls whether the versions dropdown is open
-   */
   showVersions = false;
-
-  /**
-   * Selected version before install/update/downgrade
-   */
   selectedVersion: string | null = null;
-
-  /**
-   * Selected OS for the selected version
-   */
-  selectedOS: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
-    private appService: AppService
-  ) {}
-
-  ngOnInit(): void {
-    const appId = this.route.snapshot.paramMap.get('id');
-    if (appId) {
-      this.loadApp(appId);
-    }
-  }
-
-  /**
-   * Fetch app data by ID
-   */
-  loadApp(id: string): void {
-    this.loading.set(true);
-
-    this.appService.getAppById(id).subscribe({
-      next: (app) => {
-        if (app) {
-          this.app.set(app);
+    public appService: AppService
+  ) {
+    effect(() => {
+      const currentApp = this.app();
+      const runningApps = this.appService.runningApps();
+      if(currentApp){
+        if(runningApps.includes(currentApp.id)){
+          this.actionInProgress.set("Running");
+          this.checkForActiveTimeout()
+          this.refreshBtnDisabled.set(true);
         }
-        this.loading.set(false);
-      },
-      error: (error: unknown) => {
-        console.error('Failed to load app', error);
-        this.loading.set(false);
+        else{
+          this.actionInProgress.set(null);
+          this.refreshBtnDisabled.set(false);
+        }
+        
       }
     });
   }
 
-  /**
-   * User selected a version.
-   * After choosing a version, the OS dropdown becomes relevant.
-   */
-  handleVersionChange(version: string): void {
-    this.selectedVersion = version;
-    this.selectedOS = null;
-    this.showVersions = false;
-  }
-
-  /**
-   * Install / update / downgrade according to selected version and OS
-   */
-  handlePrimaryVersionAction(): void {
-    const app = this.app();
-
-    if (!app || !this.selectedVersion || !this.selectedOS) {
+  ngOnInit(): void {
+    const apps = this.appService.getAppsSignal()();
+    if (apps.length > 0) {
+      this.setCurrentApp();
       return;
     }
 
-    this.actionInProgress.set('update');
+    this.loading.set(true);
 
-    const action$ = app.status === AppStatus.Available
-      ? this.appService.installAppVersion(app.id, this.selectedVersion, this.selectedOS)
-      : this.appService.updateAppToVersion(app.id, this.selectedVersion, this.selectedOS);
-
-    action$.subscribe({
+    this.appService.fetchData().pipe(
+      catchError(() => this.appService.initialFetch())
+    ).subscribe({
       next: () => {
-        this.loadApp(app.id);
-        this.selectedVersion = null;
-        this.selectedOS = null;
-        this.actionInProgress.set(null);
+        this.setCurrentApp();
+        this.loading.set(false);
       },
-      error: (error: unknown) => {
-        console.error('Failed to apply selected version', error);
-        this.actionInProgress.set(null);
+      error: (e: unknown) => {
+        console.error('Failed to load app data', e);
+        this.setCurrentApp();
+        this.loading.set(false);
       }
     });
   }
 
-  /**
-   * Uninstall the app
-   */
+  // loadApp(id: string): void {
+  //   this.loading.set(true);
+  //   this.appService.getAppById(id).subscribe({
+  //     next: (app) => {
+  //       console.log('Fetched app details:', app);
+  //       if (app) {
+  //         this.app.set(app);
+  //       }
+  //       this.loading.set(false);
+  //     },
+  //     error: (error: unknown) => {
+  //       console.error('Failed to load app', error);
+  //       this.loading.set(false);
+  //     }
+  //   });
+  // }
+
+  setCurrentApp(){
+    const appId = this.route.snapshot.paramMap.get('id');
+    if (appId) {
+      const found = this.appService.getAppsSignal()().find(a => a.id === appId);
+      this.app.set(found ?? null);
+    }
+  }
+
+  handleVersionChange(version: string): void {
+    this.selectedVersion = version;
+    this.showVersions = false;
+  }
+
+  handleDownloadOlderVersion(): void {
+    const app = this.app();
+    if (!app || !this.selectedVersion) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
+    this.actionInProgress.set('download');
+
+    this.appService.installAppVersion(app.id, this.selectedVersion, '').subscribe({
+      next: () => {
+        this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: this.selectedVersion });
+        this.selectedVersion = null;
+        this.actionInProgress.set(null);
+        this.addRefreshTimeout()
+      },
+      error: (error: unknown) => {
+        console.error('Failed to download version', error);
+        this.actionInProgress.set(null);
+        this.addRefreshTimeout()
+      }
+    });
+  }
+
   handleUninstall(): void {
     const app = this.app();
     if (!app) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
 
     this.actionInProgress.set('uninstall');
 
     this.appService.uninstallApp(app.id).subscribe({
       next: () => {
-        this.loadApp(app.id);
-        this.selectedVersion = null;
-        this.selectedOS = null;
+        this.app.set({ ...app, status: AppStatus.NotInstalled, installedVersion: null });
+        const versions = app.versions;
+        this.selectedVersion = versions && versions.length > 0 ? versions[0] : null;
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       },
       error: (error: unknown) => {
         console.error('Failed to uninstall app', error);
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       }
     });
   }
 
-  /**
-   * Toggle versions dropdown
-   */
   toggleVersions(): void {
     this.showVersions = !this.showVersions;
   }
 
-  /**
-   * Launch app placeholder
-   */
+  get isRunning(): boolean {
+    const app = this.app();
+    if(!!app && this.appService.isAppRunning(app.id)){
+      return true;
+    }
+    return false;
+  }
+
+  get isLaunching(): boolean {
+    const app = this.app();
+    return !!app && this.appService.isLaunching(app.id);
+  }
+
   handleLaunch(): void {
+    this.actionInProgress.set("Launch")
+
     const app = this.app();
     if (!app) return;
 
-    window.dispatchEvent(
-      new CustomEvent('show-toast', {
-        detail: `Running app: ${app.name}`
-      })
-    );
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
+    this.appService.launchApp(app.id, app.name);
   }
-  /**
-   * OS options depend on the selected version
-   */
-  get availableOperatingSystems(): string[] {
+
+  handleStop(): void {
     const app = this.app();
-
-    if (!app || !this.selectedVersion) {
-      return [];
-    }
-
-    return app.versions[this.selectedVersion] || [];
+    if (!app) return;
+    this.appService.stopApp(app.id);
+    this.addRefreshTimeout()
   }
 
-  /**
-   * Versions shown in dropdown.
-   * Available app: show all versions.
-   * Installed latest: show older versions only.
-   * Update available: show latest + older versions.
-   */
-  get versionOptions(): string[] {
+  get olderVersions(): string[] {
     const app = this.app();
-    if (!app) return [];
-
-    if (app.status === AppStatus.Installed) {
-      return app.versionOrder.slice(1, 30);
-    }
-
-    return app.versionOrder.slice(0, 30);
+    if (!app || !app.versions) return [];
+    return app.versions.filter(v => v !== app.latestVersion && v !== app.installedVersion);
   }
 
-  /**
- * Returns the index of a version in the version order.
- * Lower index means newer version.
- */
-private getVersionIndex(version: string): number {
-  const app = this.app();
-  if (!app) return -1;
-
-  return app.versionOrder.indexOf(version);
-}
-
-    /**
-     * Main action label changes according to app state and selected version
-     */
-  get primaryActionLabel(): string {
-    const app = this.app();
-
-    if (!app || !this.selectedVersion) {
-      return 'Select version';
-    }
-
-    if (app.status === AppStatus.Available) {
-      return `Install v${this.selectedVersion}`;
-    }
-
-    const installedVersion = app.installedVersion;
-
-    if (!installedVersion) {
-      return `Install v${this.selectedVersion}`;
-    }
-
-    const selectedIndex = this.getVersionIndex(this.selectedVersion);
-    const installedIndex = this.getVersionIndex(installedVersion);
-
-    if (selectedIndex < installedIndex) {
-      return `Update to v${this.selectedVersion}`;
-    }
-
-    if (selectedIndex > installedIndex) {
-      return `Downgrade to v${this.selectedVersion}`;
-    }
-
-    return `Reinstall v${this.selectedVersion}`;
-  }
-
-  /**
-   * Main action is enabled only after version and OS are selected
-   */
-  get canRunPrimaryAction(): boolean {
-    return !!this.app() &&
-           !!this.selectedVersion &&
-           !!this.selectedOS &&
-           this.actionInProgress() === null;
-  }
-
-  /**
-   * Every app can choose a version:
-   * available apps install a selected version,
-   * installed apps can downgrade,
-   * update-available apps can update/downgrade.
-   */
   get canChooseVersion(): boolean {
-    return !!this.app();
+    return !!this.app()&&this.olderVersions.length>0;
   }
 
   get canUninstall(): boolean {
-    return this.app()?.status === AppStatus.Installed ||
+    return this.app()?.status === AppStatus.UpToDate ||
            this.app()?.status === AppStatus.UpdateAvailable;
   }
 
-  get isInstalled(): boolean {
-    return this.app()?.status === AppStatus.Installed ||
-           this.app()?.status === AppStatus.UpdateAvailable;
+  get canInstallLatest(): boolean {
+    return this.app()?.installedVersion === null && !!this.app();
   }
 
-  getVersionButtonLabel(version: string): string {
-  const app = this.app();
-  if (!app) return version;
-
-  if (version === app.version) {
-    return `v${version} (latest)`;
+  get canUpdateToLatest(): boolean {
+    const app = this.app();
+    return !!app && app.installedVersion !== null && app.installedVersion !== app.latestVersion;
   }
 
-  return `v${version}`;
-}
+  handleInstallLatest(): void {
+    const app = this.app();
+    if (!app) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
+    this.actionInProgress.set('install-latest');
+    this.appService.installAppVersion(app.id, app.latestVersion, '').subscribe({
+      next: () => { 
+        this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); 
+        this.actionInProgress.set(null); 
+        this.addRefreshTimeout()
+      },
+      error: (e) => { console.error('Failed to install latest', e); 
+        this.actionInProgress.set(null); 
+        this.addRefreshTimeout()
+      }
+    });
+  }
+
+  handleUpdateToLatest(): void {
+    const app = this.app();
+    if (!app) return;
+    this.actionInProgress.set('update-latest');
+
+    this.checkForActiveTimeout();
+    this.refreshBtnDisabled.set(true);
+
+    this.appService.updateAppToVersion(app.id, app.latestVersion).subscribe({
+      next: () => { 
+        this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); 
+        this.addRefreshTimeout()
+      },  
+      error: (e) => { 
+        console.error('Failed to update to latest', e);
+        this.addRefreshTimeout() 
+      }
+    });
+  }
+
+  refreshApp(): void {
+    this.checkForActiveTimeout();
+    this.loading.set(true);
+    this.refreshBtnDisabled.set(true);
+   
+    this.appService.initialFetch().subscribe({
+      next:()=>{
+        this.setCurrentApp();
+        this.loading.set(false);
+        this.addRefreshTimeout()
+      },
+      error: (error:unknown) => {
+        console.error('Refresh failed', error);
+        this.loading.set(false);
+        this.addRefreshTimeout()
+      }
+    });
+
+  }
+
+
+  addRefreshTimeout():void{
+    const id = setTimeout(() => this.refreshBtnDisabled.set(false), 5000);
+    this.refreshTimeoutId.set(id); 
+  }
+  checkForActiveTimeout():void{
+    const existing = this.refreshTimeoutId();
+    if (existing !== null) clearTimeout(existing);
+  }
 }
