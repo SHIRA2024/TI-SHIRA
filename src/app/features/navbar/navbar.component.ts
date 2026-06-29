@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
@@ -21,6 +21,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
    */
   title = 'Connectivity Toolbox';
   toastMessage: string | null = null;
+  isRunningExpanded = signal(false);
+
+  toggleRunningExpanded(): void {
+    this.isRunningExpanded.update(v => !v);
+  }
 
   constructor(
     private ngZone: NgZone,

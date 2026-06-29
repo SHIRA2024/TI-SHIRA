@@ -12,7 +12,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  /* background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); */
+  background-color: #D1D1D1;
   border-radius: 14px;
   font-weight: 700;
   color: white;

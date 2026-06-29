@@ -28,7 +28,7 @@
 
 .header-right {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 1rem;
 }
 
@@ -145,6 +145,29 @@
   align-items: center;
   margin-bottom: 1rem;
 }
+
+.refresh-btn{
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  aspect-ratio: 1 / 1;
+  z-index: inherit;
+  cursor: pointer;
+}
+
+.loading-spinner {
+    animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 
 .skeleton-icon {
   width: 80px;

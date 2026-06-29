@@ -199,11 +199,7 @@
 }
 
 
-
-
-
 .app-title {
-  font-family: 'Playfair Display', serif;
   font-size: 2rem;
   font-weight: 800;
   color: var(--color-primary);
@@ -244,6 +240,17 @@
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.1);
 }
 
+.btn-uninstall-header:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-uninstall-header:disabled:hover {
+  background: white;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-run-header {
   background: var(--color-accent-dark);
   color: white;
@@ -260,6 +267,17 @@
   filter: brightness(1.2);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-run-header:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-run-header:disabled:hover {
+  filter: none;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-green-header {
@@ -281,6 +299,17 @@
   box-shadow: 0 4px 10px rgba(41, 191, 18, 0.25);
 }
 
+.btn-green-header:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-green-header:disabled:hover {
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
 .older-versions-card {
   background: white;
   border: 1px solid #e8ebef;
@@ -292,7 +321,6 @@
 }
 
 .older-versions-heading {
-  font-family: 'Playfair Display', serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--color-accent-dark);
@@ -635,6 +663,28 @@ button.is-running {
   transition: transform 0.3s ease;
 }
 
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+.refresh-btn:disabled:hover {
+  background: white;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+.loading-spinner {
+    animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 @keyframes runAnimation {
   0% { transform: translateY(0) rotate(0deg); }
   100% { transform: translateY(-2px) rotate(10deg); }
@@ -654,4 +704,22 @@ button.is-running {
   font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid var(--color-accent-medium);
+}
+.not-found {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+.not-found h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+.not-found p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+.back-link {
+  color: var(--color-accent-medium);
+  font-weight: 600;
+  text-decoration: none;
 }

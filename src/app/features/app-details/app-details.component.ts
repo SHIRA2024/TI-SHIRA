@@ -1,9 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AppService } from '../../services/app.service';
 import { App, AppStatus } from '../../models/app.model';
+import { catchError } from 'rxjs';
 import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.component';
 
 /** Full details view for an app with version management and actions */
@@ -17,40 +18,82 @@ import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.comp
 export class AppDetailsComponent implements OnInit {
 
   app = signal<App | null>(null);
-  loading = signal<boolean>(true);
+  loading = signal<boolean>(false);
+  refreshBtnDisabled = signal<boolean>(false)
+  refreshTimeoutId = signal<ReturnType<typeof setTimeout> | null>(null);
   actionInProgress = signal<string | null>(null);
   showVersions = false;
   selectedVersion: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
     public appService: AppService
-  ) {}
-
-  ngOnInit(): void {
-    const appId = this.route.snapshot.paramMap.get('id');
-    if (appId) {
-      this.loadApp(appId);
-    }
-    console.log(appId);
+  ) {
+    effect(() => {
+      const currentApp = this.app();
+      const runningApps = this.appService.runningApps();
+      if(currentApp){
+        if(runningApps.includes(currentApp.id)){
+          this.actionInProgress.set("Running");
+          this.checkForActiveTimeout()
+          this.refreshBtnDisabled.set(true);
+        }
+        else{
+          this.actionInProgress.set(null);
+          this.refreshBtnDisabled.set(false);
+        }
+        
+      }
+    });
   }
 
-  loadApp(id: string): void {
+  ngOnInit(): void {
+    const apps = this.appService.getAppsSignal()();
+    if (apps.length > 0) {
+      this.setCurrentApp();
+      return;
+    }
+
     this.loading.set(true);
-    this.appService.getAppById(id).subscribe({
-      next: (app) => {
-        console.log('Fetched app details:', app);
-        if (app) {
-          this.app.set(app);
-        }
+
+    this.appService.fetchData().pipe(
+      catchError(() => this.appService.initialFetch())
+    ).subscribe({
+      next: () => {
+        this.setCurrentApp();
         this.loading.set(false);
       },
-      error: (error: unknown) => {
-        console.error('Failed to load app', error);
+      error: (e: unknown) => {
+        console.error('Failed to load app data', e);
+        this.setCurrentApp();
         this.loading.set(false);
       }
     });
+  }
+
+  // loadApp(id: string): void {
+  //   this.loading.set(true);
+  //   this.appService.getAppById(id).subscribe({
+  //     next: (app) => {
+  //       console.log('Fetched app details:', app);
+  //       if (app) {
+  //         this.app.set(app);
+  //       }
+  //       this.loading.set(false);
+  //     },
+  //     error: (error: unknown) => {
+  //       console.error('Failed to load app', error);
+  //       this.loading.set(false);
+  //     }
+  //   });
+  // }
+
+  setCurrentApp(){
+    const appId = this.route.snapshot.paramMap.get('id');
+    if (appId) {
+      const found = this.appService.getAppsSignal()().find(a => a.id === appId);
+      this.app.set(found ?? null);
+    }
   }
 
   handleVersionChange(version: string): void {
@@ -62,6 +105,9 @@ export class AppDetailsComponent implements OnInit {
     const app = this.app();
     if (!app || !this.selectedVersion) return;
 
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
     this.actionInProgress.set('download');
 
     this.appService.installAppVersion(app.id, this.selectedVersion, '').subscribe({
@@ -69,10 +115,12 @@ export class AppDetailsComponent implements OnInit {
         this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: this.selectedVersion });
         this.selectedVersion = null;
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       },
       error: (error: unknown) => {
         console.error('Failed to download version', error);
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       }
     });
   }
@@ -80,6 +128,9 @@ export class AppDetailsComponent implements OnInit {
   handleUninstall(): void {
     const app = this.app();
     if (!app) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
 
     this.actionInProgress.set('uninstall');
 
@@ -89,10 +140,12 @@ export class AppDetailsComponent implements OnInit {
         const versions = app.versions;
         this.selectedVersion = versions && versions.length > 0 ? versions[0] : null;
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       },
       error: (error: unknown) => {
         console.error('Failed to uninstall app', error);
         this.actionInProgress.set(null);
+        this.addRefreshTimeout()
       }
     });
   }
@@ -103,7 +156,10 @@ export class AppDetailsComponent implements OnInit {
 
   get isRunning(): boolean {
     const app = this.app();
-    return !!app && this.appService.isAppRunning(app.id);
+    if(!!app && this.appService.isAppRunning(app.id)){
+      return true;
+    }
+    return false;
   }
 
   get isLaunching(): boolean {
@@ -112,8 +168,14 @@ export class AppDetailsComponent implements OnInit {
   }
 
   handleLaunch(): void {
+    this.actionInProgress.set("Launch")
+
     const app = this.app();
     if (!app) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
     this.appService.launchApp(app.id, app.name);
   }
 
@@ -121,6 +183,7 @@ export class AppDetailsComponent implements OnInit {
     const app = this.app();
     if (!app) return;
     this.appService.stopApp(app.id);
+    this.addRefreshTimeout()
   }
 
   get olderVersions(): string[] {
@@ -130,7 +193,7 @@ export class AppDetailsComponent implements OnInit {
   }
 
   get canChooseVersion(): boolean {
-    return !!this.app();
+    return !!this.app()&&this.olderVersions.length>0;
   }
 
   get canUninstall(): boolean {
@@ -150,10 +213,21 @@ export class AppDetailsComponent implements OnInit {
   handleInstallLatest(): void {
     const app = this.app();
     if (!app) return;
+
+    this.checkForActiveTimeout()
+    this.refreshBtnDisabled.set(true);
+
     this.actionInProgress.set('install-latest');
     this.appService.installAppVersion(app.id, app.latestVersion, '').subscribe({
-      next: () => { this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); this.actionInProgress.set(null); },
-      error: (e) => { console.error('Failed to install latest', e); this.actionInProgress.set(null); }
+      next: () => { 
+        this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); 
+        this.actionInProgress.set(null); 
+        this.addRefreshTimeout()
+      },
+      error: (e) => { console.error('Failed to install latest', e); 
+        this.actionInProgress.set(null); 
+        this.addRefreshTimeout()
+      }
     });
   }
 
@@ -161,26 +235,49 @@ export class AppDetailsComponent implements OnInit {
     const app = this.app();
     if (!app) return;
     this.actionInProgress.set('update-latest');
+
+    this.checkForActiveTimeout();
+    this.refreshBtnDisabled.set(true);
+
     this.appService.updateAppToVersion(app.id, app.latestVersion).subscribe({
-      next: () => { this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); this.actionInProgress.set(null); },
-      error: (e) => { console.error('Failed to update to latest', e); this.actionInProgress.set(null); }
+      next: () => { 
+        this.app.set({ ...app, status: AppStatus.UpToDate, installedVersion: app.latestVersion }); 
+        this.addRefreshTimeout()
+      },  
+      error: (e) => { 
+        console.error('Failed to update to latest', e);
+        this.addRefreshTimeout() 
+      }
     });
   }
 
-  refreshAppById(): void {
-    const app = this.app();
-    if (!app) return;
-
+  refreshApp(): void {
+    this.checkForActiveTimeout();
     this.loading.set(true);
-    this.appService.getAppById(app.id).subscribe({
-      next: (updatedApp) => {
-        this.app.set(updatedApp);
+    this.refreshBtnDisabled.set(true);
+   
+    this.appService.initialFetch().subscribe({
+      next:()=>{
+        this.setCurrentApp();
         this.loading.set(false);
+        this.addRefreshTimeout()
       },
-      error: (error) => {
+      error: (error:unknown) => {
         console.error('Refresh failed', error);
         this.loading.set(false);
+        this.addRefreshTimeout()
       }
     });
+
+  }
+
+
+  addRefreshTimeout():void{
+    const id = setTimeout(() => this.refreshBtnDisabled.set(false), 5000);
+    this.refreshTimeoutId.set(id); 
+  }
+  checkForActiveTimeout():void{
+    const existing = this.refreshTimeoutId();
+    if (existing !== null) clearTimeout(existing);
   }
 }

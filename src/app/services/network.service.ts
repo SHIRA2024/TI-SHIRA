@@ -1,74 +1,48 @@
-import { Injectable, signal, OnDestroy } from '@angular/core';
-import { Subject, Subscription } from 'rxjs';
+import { Injectable, signal, OnDestroy, NgZone } from '@angular/core';
+import { Subject, Subscription,Observable } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { WSMessage } from '../models/app.model';
+import { io, Socket } from 'socket.io-client';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NetworkService implements OnDestroy {
-  messages$ = new Subject<WSMessage>();
-  connectionStatus = signal<'connected' | 'disconnected'>('disconnected');
+  private socket!: Socket;
+  private readonly SERVER_URL = 'http://localhost:5000';
 
-  private ws$: WebSocketSubject<WSMessage> | null = null;
-  private wsSubscription: Subscription | null = null;
-  // private pollingSubscription: Subscription | null = null;
-  private readonly wsUrl = 'ws://localhost:5100/ws';
-  // private readonly apiBaseUrl = 'http://localhost:5000/api';
-
-  constructor() {}
-
-  connect(): void {
-    this.disconnect();
-
-    try {
-      this.ws$ = webSocket<WSMessage>({
-        url: this.wsUrl,
-        deserializer: msg => JSON.parse(msg.data) as WSMessage,
-        serializer: msg => JSON.stringify(msg),
-        openObserver: {
-          next: () => {
-            console.log('WebSocket connected');
-            this.connectionStatus.set('connected');
-          }
-        },
-        closeObserver: {
-          next: () => {
-            console.log('WebSocket disconnected');
-            this.connectionStatus.set('disconnected');
-          }
-        }
-      });
-
-      this.wsSubscription = this.ws$.subscribe({
-        next: (msg) => this.messages$.next(msg),
-        error: (err) => {
-          console.error('WebSocket error', err);
-          this.connectionStatus.set('disconnected');
-        }
-      });
-    } catch (e) {
-      console.warn('WebSocket connection failed', e);
-      this.connectionStatus.set('disconnected');
-    }
+  constructor(private zone:NgZone) {
+    this.connect()
   }
 
-  disconnect(): void {
-    if (this.wsSubscription) {
-      this.wsSubscription.unsubscribe();
-      this.wsSubscription = null;
-    }
-    if (this.ws$) {
-      this.ws$.complete();
-      this.ws$ = null;
-    }
-    // this.stopPolling();
+  private connect(namespace:string = "app-running-status"): void {
+    this.socket = io(`${this.SERVER_URL}/${namespace}`, {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 2000,
+      transports: ['websocket', 'polling'] // WebSocket first, fallback to polling
+    });
+
+    // Lifecycle logging
+    this.socket.on('connect', () => console.log('Connected to Server through Socket.io !! id:', this.socket.id));
+    this.socket.on('disconnect', (reason) => console.warn('Disconnected from server socket: ', reason));
   }
 
-  send(msg: WSMessage): void {
-    if (this.ws$) {
-      this.ws$.next(msg);
-    }
+  public onEvent<T>(eventName: string): Observable<T> {
+    return new Observable<T>((observer) => {
+      this.socket.on(eventName, (data: T) => {
+        observer.next(data);
+      });
+
+      // Cleanup logic when subscription is torn down
+      return () => {
+        this.socket.off(eventName);
+      };
+    });
+  }
+
+  public emitEvent(eventName: string, payload: any): void {
+    this.socket.emit(eventName, payload);
   }
 
   // startPolling(): void {
@@ -97,7 +71,8 @@ export class NetworkService implements OnDestroy {
   // }
 
   ngOnDestroy(): void {
-    this.disconnect();
-    this.messages$.complete();
+    if (this.socket) {
+      this.socket.disconnect();
+    }
   }
 }

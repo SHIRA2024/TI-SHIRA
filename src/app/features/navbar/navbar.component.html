@@ -10,15 +10,24 @@
   </main>
 </div> 
 
-<div class="running-overlays-container">
-  @for (runningApp of appService.runningAppDetails(); track runningApp.id) {
-    <div class="running-overlay">
-      <span class="running-icon">🏃</span>
-      <span class="running-text">{{ runningApp.name }} is running...</span>
-      <button class="stop-btn" (click)="appService.stopApp(runningApp.id)">✕</button>
+@if (appService.runningAppDetails().length > 0) {
+  <div class="running-apps-card">
+    <div class="running-apps-header" (click)="toggleRunningExpanded()">
+      <span class="running-apps-title">Currently Running Apps</span>
+      <span class="running-apps-toggle" [class.expanded]="isRunningExpanded()">▼</span>
     </div>
-  }
-</div>
+    @if (isRunningExpanded()) {
+      <div class="running-apps-body">
+        @for (app of appService.runningAppDetails(); track app.id) {
+          <div class="running-app-item">
+            <span class="running-app-name">{{ app.name }}</span>
+            <button class="running-app-stop" (click)="appService.stopApp(app.id)">Stop</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
 
 @if (notificationService.currentToast(); as toast) {
   <div class="toast-notification">

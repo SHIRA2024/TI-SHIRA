@@ -19,12 +19,12 @@ export class InstalledComponent implements OnInit {
   constructor(private appService: AppService) {}
 
   ngOnInit(): void {
-    this.loadApps();
+    // this.loadApps();
   }
 
   loadApps(): void {
     this.loading.set(true);
-    this.appService.getApps().subscribe({
+    this.appService.fetchData().subscribe({
       next: (allApps) => {
         const installedApps = allApps.filter(app =>
           app.status === AppStatus.UpToDate || app.status === AppStatus.UpdateAvailable

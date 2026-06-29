@@ -1,6 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap, of, catchError } from 'rxjs';
+import { Observable, map, tap, of, catchError, Subscription } from 'rxjs';
 import { App, AppStatus, WSMessage } from '../models/app.model';
 import { NotificationService } from './notification.service';
 import { NetworkService } from './network.service';
@@ -18,7 +18,7 @@ export interface OperationResult {
 export class AppService {
   private readonly apiBaseUrl = 'http://localhost:5000/api';
   private apps = signal<App[]>([]);
-
+  private runningAppsSub : Subscription|null = null
   runningApps = signal<string[]>([]);
   launchingApps = signal<string[]>([]);
 
@@ -42,20 +42,22 @@ export class AppService {
     private notificationService: NotificationService,
     private network: NetworkService
   ) {
-    this.network.messages$.subscribe(msg => this.handleWSMessage(msg));
-    this.network.connect();
+    this.runningAppsSub = this.network.onEvent<WSMessage>('server_response').subscribe({
+      next:(message:WSMessage)=> {this.handleWSMessage(message)},
+      error:(err:unknown)=>{console.error('Error: ',err)}
+    });
+    this.network.emitEvent("client_message",{type:"status"});
   }
 
   //////////////////////////////////////APP FETCHING ///////////////////////////////////////
 
-  /** Fetch all apps with status mapping */
-  getApps(): Observable<App[]> {
-    return this.http.get<any>(`${this.apiBaseUrl}/fetch-data`).pipe(
+  initialFetch(): Observable<App[]> {
+    return this.http.get<any>(`${this.apiBaseUrl}/initial-fetch`).pipe(
       map(backendData => {
         const backendAppsArray = Object.values(backendData);
         const resApps:App[] = [];
         backendAppsArray.forEach((backendApp:any)=>{
-          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
+          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion||!backendApp.versions||!backendApp.supportedOS) {
             console.log(`The app: ${backendApp} is missing necessary props`)
             return;
           }
@@ -94,56 +96,105 @@ export class AppService {
     );
   }
 
-
-  /** Fetch single app by ID with cache fallback */
-  getAppById(id: string): Observable<App> {
-    return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
-      map(backendApp => {
-
-        if (!backendApp || typeof backendApp !== 'object' || Array.isArray(backendApp)) {
-          throw new Error(`Invalid response for app ${id}: expected an object, got ${typeof backendApp}`);
-        }
-        if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
-          throw new Error(`The app: ${backendApp} is missing necessary props`)
-        }
-        if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
-          throw new Error(`The app with id: ${backendApp.id} has a wrong type of status`)  
-        }
-        let mappedStatus = AppStatus.UpToDate;
-        if (backendApp.status === 'not installed') {
-          mappedStatus = AppStatus.NotInstalled;
-        } else if (backendApp.status === 'update available') {
-          mappedStatus = AppStatus.UpdateAvailable;
-        }
-        return {
+  /** Fetch all apps with status mapping */
+  fetchData(): Observable<App[]> {
+    return this.http.get<any>(`${this.apiBaseUrl}/fetch-data`).pipe(
+      map(backendData => {
+        const backendAppsArray = Object.values(backendData);
+        const resApps:App[] = [];
+        backendAppsArray.forEach((backendApp:any)=>{
+          if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion||!backendApp.versions||!backendApp.supportedOS) {
+            console.log(`The app: ${backendApp} is missing necessary props`)
+            return;
+          }
+          if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+            console.log(`The app with id: ${backendApp.id} has a wrong type of status`)
+            return;
+          }
+          let mappedStatus = AppStatus.UpToDate;
+          if (backendApp.status === 'not installed') {
+            mappedStatus = AppStatus.NotInstalled;
+          } else if (backendApp.status === 'update available') {
+            mappedStatus = AppStatus.UpdateAvailable;
+          }
+          resApps.push({
             ...backendApp,
             id: String(backendApp.id),
             status: mappedStatus,
-          } as App
-      }), 
-      tap((mappedApp: App) => {
-        const currentApps = this.apps();
-        const existingIndex = currentApps.findIndex(a => String(a.id) === String(id));
-        if (existingIndex >= 0) {
-          const newApps = [...currentApps];
-          newApps[existingIndex] = mappedApp;
-          this.apps.set(newApps);
-        } else {
-          this.apps.set([...currentApps, mappedApp]);
-        }
+          } as App);
+
+        });
+        return resApps;
       }),
-      catchError((error) => {
-        console.warn(`Network fetch failed for app ${id}. Attempting to use local cache...`);
-        const cachedApp = this.apps().find(a => String(a.id) === String(id));
-        if (cachedApp) {
-          console.log(`Successfully recovered App ${id} from cache!`);
-          return of(cachedApp);
+      tap((apps: App[]) => {
+        this.apps.set(apps);
+        console.log('Mapped apps ready for UI:', apps);
+      }),
+      catchError((error:any) => {
+        console.error('An error occurred during fetch-data process: ',error);
+        const cachedApps = this.apps();
+        if (cachedApps.length > 0) {
+          console.log('Successfully recovered the apps list from cache!');
+          return of(cachedApps);
         }
-        console.error(`App ${id} is completely missing.`);
         throw error;
       })
     );
   }
+
+  getAppById(appId:string){
+    return this.apps().find(app=>app.id==appId);
+  }
+
+  // /** Fetch single app by ID with cache fallback */
+  // getAppById(id: string): Observable<App> {
+  //   return this.http.get<any>(`${this.apiBaseUrl}/fetch-data/${id}`).pipe(
+  //     map(backendApp => {
+
+  //       if (!backendApp || typeof backendApp !== 'object' || Array.isArray(backendApp)) {
+  //         throw new Error(`Invalid response for app ${id}: expected an object, got ${typeof backendApp}`);
+  //       }
+  //       if (!backendApp.id || !backendApp.description || !backendApp.name || !backendApp.status || !backendApp.latestVersion) {
+  //         throw new Error(`The app: ${backendApp} is missing necessary props`)
+  //       }
+  //       if (backendApp.status!=="up to date"&&backendApp.status!=="not installed"&&backendApp.status!=="update available"){
+  //         throw new Error(`The app with id: ${backendApp.id} has a wrong type of status`)  
+  //       }
+  //       let mappedStatus = AppStatus.UpToDate;
+  //       if (backendApp.status === 'not installed') {
+  //         mappedStatus = AppStatus.NotInstalled;
+  //       } else if (backendApp.status === 'update available') {
+  //         mappedStatus = AppStatus.UpdateAvailable;
+  //       }
+  //       return {
+  //           ...backendApp,
+  //           id: String(backendApp.id),
+  //           status: mappedStatus,
+  //         } as App
+  //     }), 
+  //     tap((mappedApp: App) => {
+  //       const currentApps = this.apps();
+  //       const existingIndex = currentApps.findIndex(a => String(a.id) === String(id));
+  //       if (existingIndex >= 0) {
+  //         const newApps = [...currentApps];
+  //         newApps[existingIndex] = mappedApp;
+  //         this.apps.set(newApps);
+  //       } else {
+  //         this.apps.set([...currentApps, mappedApp]);
+  //       }
+  //     }),
+  //     catchError((error) => {
+  //       console.warn(`Network fetch failed for app ${id}. Attempting to use local cache...`);
+  //       const cachedApp = this.apps().find(a => String(a.id) === String(id));
+  //       if (cachedApp) {
+  //         console.log(`Successfully recovered App ${id} from cache!`);
+  //         return of(cachedApp);
+  //       }
+  //       console.error(`App ${id} is completely missing.`);
+  //       throw error;
+  //     })
+  //   );
+  // }
 
 //////////////////////////////////////APP LAUNCHING\CLOSING ///////////////////////////////////////
 
@@ -151,29 +202,36 @@ export class AppService {
     switch (msg.type) {
       case 'app-running':
         if (msg.appId) {
-          this.launchingApps.update(list => list.filter(id => id !== msg.appId));
+          this.removeLaunchingApp(msg.appId)
           this.addRunningApp(msg.appId);
         }
         break;
       case 'app-stopped':
         if (msg.appId) this.removeRunningApp(msg.appId);
         break;
+      case 'running-apps':
+        this.runningApps.set([]);
+        msg.appIds.forEach(id=>{
+          if(this.getAppById(id))
+            this.runningApps().push(id);
+        });
+        console.log(this.runningApps());
     }
   }
 
   launchApp(id: string, name: string): void {
-    this.network.send({ type: 'launch', appId: id });
-    this.launchingApps.update(list => [...list, id]);
+    this.network.emitEvent('client_message',{ type: 'launch', appId: id })
+    this.addLaunchingApp(id);
     setTimeout(() => {
       if (this.isLaunching(id)) {
-        this.launchingApps.update(list => list.filter(a => a !== id));
+        this.removeLaunchingApp(id);
         this.notificationService.showError(`Failed to launch ${name}`);
       }
     }, 30000);
   }
 
   stopApp(id: string): void {
-    this.network.send({ type: 'stop', appId: id });
+    this.network.emitEvent('client_message',{ type: 'stop', appId: id }) 
   }
   addRunningApp(id: string) {
     if (!this.isAppRunning(id)) {
@@ -204,7 +262,10 @@ export class AppService {
     ).pipe(
       tap((response: OperationResult) => {
         if (!response?.success) throw new Error(response?.message || 'Install failed');
-        this.updateAppInCache(id, { status: AppStatus.UpToDate, installedVersion: targetVersion });
+        const currentApps = this.apps();
+        const index = currentApps.findIndex(a => String(a.id) === String(id));
+        if(index>=0)
+          this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
       })
     );
   }
@@ -218,7 +279,10 @@ export class AppService {
     ).pipe(
       tap((response: OperationResult) => {
         if (!response?.success) throw new Error(response?.message || 'Update failed');
-        this.updateAppInCache(id, { status: AppStatus.UpToDate, installedVersion: targetVersion });
+        const currentApps = this.apps();
+        const index = currentApps.findIndex(a => String(a.id) === String(id));
+        if(index>=0)
+          this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
       })
     );
   }
@@ -247,12 +311,13 @@ export class AppService {
     return this.apps.asReadonly();
   }
 
-   /** Refresh apps from backend */
-  refreshApps(): void {
-    this.getApps().subscribe({
-      error: (error: unknown) => console.error('Failed to refresh apps', error)
-    });
+  getAppStatus(installedVersion:string,latestVersion:string){
+    if(installedVersion===latestVersion){
+      return AppStatus.UpToDate
+    }
+    return AppStatus.UpdateAvailable
   }
+
   private updateAppInCache(id: string, changes: Partial<App>): void {
     const currentApps = this.apps();
     const index = currentApps.findIndex(a => String(a.id) === String(id));
@@ -261,6 +326,9 @@ export class AppService {
       newApps[index] = { ...currentApps[index], ...changes };
       this.apps.set(newApps);
     }
+  }
+  ngOnDestroy(){
+    this.runningAppsSub?.unsubscribe()
   }
 }
 

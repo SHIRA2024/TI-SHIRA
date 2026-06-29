@@ -17,8 +17,10 @@ export interface App {
   iconUrl: string|null;
 }
 
-export interface WSMessage {
-  type: 'launch' | 'app-running' | 'app-stopped' | 'stop' ;
+export type WSMessage={
+  type: 'launch' | 'app-running' | 'app-stopped' | 'stop';
   appId: string;
-}
+}|{type:'status'}|{type:"running-apps",appIds:string[]}
+
+
 

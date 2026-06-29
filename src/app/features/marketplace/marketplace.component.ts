@@ -5,7 +5,7 @@ import { App, AppStatus } from '../../models/app.model';
 import { AppCardComponent } from '../../shared/components/app-card/app-card.component';
 
 /** Main marketplace view for browsing, filtering, and managing apps */
-type statusType = 'all'|'installed'|'update-available'|'available';
+type statusType = 'all'|'installed'|'update-available'|'not-installed';
 @Component({
   selector: 'app-marketplace',
   imports: [CommonModule, AppCardComponent],
@@ -14,9 +14,9 @@ type statusType = 'all'|'installed'|'update-available'|'available';
 })
 export class MarketplaceComponent implements OnInit {
   apps = signal<App[]>([]);
-  loading = signal<boolean>(true);
+  loading = signal<boolean>(false);
   viewMode = signal<'grid' | 'list'>('grid');
-
+  isRecentlyRefreshed = signal<boolean>(false)
   filterStatus = signal<statusType>('all');
 
   constructor(private appService: AppService) {}
@@ -24,19 +24,47 @@ export class MarketplaceComponent implements OnInit {
   ngOnInit(): void {
     this.loadApps();
   }
+  
+  loadApps(): void{
+    if(this.appService.getAppsSignal()().length===0){    
+      this.loading.set(true);
+      this.isRecentlyRefreshed.set(true);
+      this.appService.fetchData().subscribe({
+        next: (apps) => {
+          this.apps.set(apps);
+          this.loading.set(false);
+          setTimeout(()=>this.isRecentlyRefreshed.set(false),5000);
+        },
+        error: (error) => {
+          console.error('Failed to load apps', error);
+          this.loading.set(false);
+          setTimeout(()=>this.isRecentlyRefreshed.set(false),5000);
+        }
+      }); 
+    }
+    else{
+      this.apps.set(this.appService.getAppsSignal()())
+    }
+     
+    
+  }
 
-  loadApps(): void {
+  initialFetch(): void{
     this.loading.set(true);
-    this.appService.getApps().subscribe({
+    this.isRecentlyRefreshed.set(true);
+    this.appService.initialFetch().subscribe({
       next: (apps) => {
         this.apps.set(apps);
         this.loading.set(false);
+        setTimeout(()=>this.isRecentlyRefreshed.set(false),5000);
       },
       error: (error) => {
         console.error('Failed to load apps', error);
         this.loading.set(false);
+        setTimeout(()=>this.isRecentlyRefreshed.set(false),5000);
       }
     });
+    
   }
 
   toggleViewMode(): void {
@@ -53,19 +81,27 @@ export class MarketplaceComponent implements OnInit {
     if (filter === 'all') {
       return apps;
     }
-    return apps.filter(app => app.status === filter as AppStatus);
+    return apps.filter(app =>{ 
+      if(filter === "installed")
+        return app.status===AppStatus.UpToDate|| app.status===AppStatus.UpdateAvailable;
+      if(filter==="not-installed")
+        return app.status===AppStatus.NotInstalled;
+      if(filter==="update-available")
+        return app.status===AppStatus.UpdateAvailable;
+      return;
+      });
   }
 
   get installedCount(): number {
-    return this.apps().filter(app => app.status === AppStatus.UpToDate).length;
+    return this.apps().filter(app => app.status === AppStatus.UpToDate||app.status===AppStatus.UpdateAvailable).length;
   }
 
   get updateAvailableCount(): number {
     return this.apps().filter(app => app.status === AppStatus.UpdateAvailable).length;
   }
 
-  refreshApps(): void {
-    this.appService.refreshApps();
+  get notInstalledCount(): number {
+    return this.apps().filter(app => app.status === AppStatus.NotInstalled).length;
   }
 }
 

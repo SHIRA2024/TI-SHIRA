@@ -3,7 +3,7 @@
     <div class="card-top">
       <app-logo [iconUrl]="app().iconUrl" [name]="app().name" [size]="80" />
       <div class="card-name-area">
-        <h3 class="card-name">{{ app().name }}</h3>
+        <h3 #cardName class="card-name" [class.scroll]="hasOverflow" [style.--scroll-distance.px]="scrollDistance">{{ app().name }}</h3>
       </div>
     </div>
     <p class="card-description">{{ app().description }}</p>
