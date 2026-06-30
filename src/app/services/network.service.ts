@@ -10,7 +10,7 @@ import { io, Socket } from 'socket.io-client';
 export class NetworkService implements OnDestroy {
   private socket!: Socket;
   private readonly SERVER_URL = 'http://localhost:5000';
-
+  private connectSubject = new Subject<void>();
   constructor(private zone:NgZone) {
     this.connect()
   }
@@ -20,11 +20,15 @@ export class NetworkService implements OnDestroy {
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 2000,
+      //transports: ['websocket'] // WebSocket first, fallback to polling
       transports: ['websocket', 'polling'] // WebSocket first, fallback to polling
     });
 
     // Lifecycle logging
-    this.socket.on('connect', () => console.log('Connected to Server through Socket.io !! id:', this.socket.id));
+    this.socket.on('connect', () => {
+      console.log('Connected to Server through Socket.io !! id:', this.socket.id);
+      this.connectSubject.next();
+    });
     this.socket.on('disconnect', (reason) => console.warn('Disconnected from server socket: ', reason));
   }
 
@@ -43,6 +47,13 @@ export class NetworkService implements OnDestroy {
 
   public emitEvent(eventName: string, payload: any): void {
     this.socket.emit(eventName, payload);
+  }
+  public onConnect(): Observable<void> {
+    return this.connectSubject.asObservable();
+  }
+
+  public get isConnected(): boolean {
+    return this.socket?.connected ?? false;
   }
 
   // startPolling(): void {

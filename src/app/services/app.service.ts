@@ -41,12 +41,20 @@ export class AppService {
     private http: HttpClient,
     private notificationService: NotificationService,
     private network: NetworkService
-  ) {
-    this.runningAppsSub = this.network.onEvent<WSMessage>('server_response').subscribe({
+  ) 
+  {
+    if (this.network.isConnected) {
+      this.network.emitEvent("client_message", { type: "status" });
+    } 
+    else {
+      this.network.onConnect().subscribe(() => {
+        this.network.emitEvent("client_message", { type: "status" });
+      });
+    }
+    this.network.onEvent<WSMessage>('server_response').subscribe({
       next:(message:WSMessage)=> {this.handleWSMessage(message)},
       error:(err:unknown)=>{console.error('Error: ',err)}
     });
-    this.network.emitEvent("client_message",{type:"status"});
   }
 
   //////////////////////////////////////APP FETCHING ///////////////////////////////////////
@@ -210,12 +218,7 @@ export class AppService {
         if (msg.appId) this.removeRunningApp(msg.appId);
         break;
       case 'running-apps':
-        this.runningApps.set([]);
-        msg.appIds.forEach(id=>{
-          if(this.getAppById(id))
-            this.runningApps().push(id);
-        });
-        console.log(this.runningApps());
+        this.runningApps.set(msg.appIds.filter(id => this.getAppById(id)));
     }
   }
 
