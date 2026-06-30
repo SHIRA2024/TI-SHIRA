@@ -1,0 +1,61 @@
+.installed-container {
+  width: 100%;
+}
+
+.installed-header {
+  margin-bottom: 2rem;
+}
+
+.installed-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.apps-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .apps-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+

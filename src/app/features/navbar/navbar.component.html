@@ -1,0 +1,37 @@
+<div class="navbar-container">
+  <header class="navbar-header">
+    <div class="header-content">
+      <img src="/TI-Logos-RGB/One-Line/Reversed/ti_hz_1c_rev_rgb.svg" alt="Texas Instruments" class="navbar-logo" />
+    </div>
+  </header>
+  
+  <main class="navbar-main">
+    <router-outlet></router-outlet>
+  </main>
+</div> 
+
+@if (appService.runningAppDetails().length > 0) {
+  <div class="running-apps-card">
+    <div class="running-apps-header" (click)="toggleRunningExpanded()">
+      <span class="running-apps-title">Currently Running Apps</span>
+      <span class="running-apps-toggle" [class.expanded]="isRunningExpanded()">▼</span>
+    </div>
+    @if (isRunningExpanded()) {
+      <div class="running-apps-body">
+        @for (app of appService.runningAppDetails(); track app.id) {
+          <div class="running-app-item">
+            <span class="running-app-name">{{ app.name }}</span>
+            <button class="running-app-stop" (click)="appService.stopApp(app.id)">Stop</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+@if (notificationService.currentToast(); as toast) {
+  <div class="toast-notification">
+    <span class="toast-message">{{ toast.message }}</span>
+    <button class="close-toast" (click)="notificationService.clearToast()">✕</button>
+  </div>
+}

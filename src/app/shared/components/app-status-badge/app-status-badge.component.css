@@ -1,0 +1,27 @@
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: default;
+  user-select: none;
+}
+
+.badge-installed {
+  background-color: #29bf12;
+  color: white;
+}
+
+.badge-available {
+  background-color: var(--color-accent-light);
+  color: white;
+}
+
+.badge-update {
+  background-color: var(--color-primary);
+  color: white;
+}
+
