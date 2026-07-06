@@ -18,7 +18,7 @@ export class AppStatusBadgeComponent {
     switch (this.status()) {
       case AppStatus.UpToDate: return 'badge-installed';
       case AppStatus.UpdateAvailable: return 'badge-update';
-      case AppStatus.UpToDate: return 'badge-available';
+      case AppStatus.NotInstalled: return 'badge-not-installed';
       default: return '';
     }
   }

@@ -20,6 +20,15 @@ export class NotificationService {
     }, 4000);
   }
 
+  showSuccess(message: string) {
+    this.currentToast.set({ message, type: 'success' });
+
+    // Automatically hide the popup after 4 seconds
+    setTimeout(() => {
+      this.currentToast.set(null);
+    }, 4000);
+  }
+
   clearToast() {
     this.currentToast.set(null);
   }

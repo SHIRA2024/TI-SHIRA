@@ -164,7 +164,7 @@
 }
 
 /* 
-  Error Popup (Bottom Center) 
+  Notification Popup (Bottom Center) 
 */
 
 .toast-notification {
@@ -172,7 +172,7 @@
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #ef4444; /* A nice red color for errors */
+  background-color: #111827; /* neutral fallback */
   color: white;
   padding: 14px 24px;
   border-radius: 6px;
@@ -181,6 +181,14 @@
   align-items: center;
   gap: 16px;
   z-index: 10000;
+}
+
+.toast-notification.toast-success {
+  background-color: #16a34a; /* green for successful actions */
+}
+
+.toast-notification.toast-error {
+  background-color: #ef4444; /* red for failed actions */
 }
 
 .close-toast {

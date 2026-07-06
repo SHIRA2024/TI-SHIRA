@@ -18,3 +18,14 @@
   font-weight: 700;
   color: white;
 }
+
+:host-context(.list-view) .logo-wrapper,
+:host-context(.list-view) .logo-image,
+:host-context(.list-view) .logo-fallback {
+  width: 52px !important;
+  height: 52px !important;
+}
+
+:host-context(.list-view) .logo-fallback {
+  font-size: 20px !important;
+}

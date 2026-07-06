@@ -202,12 +202,24 @@ export class AppService {
     switch (msg.type) {
       case 'app-running':
         if (msg.appId) {
+          const wasLaunching = this.isLaunching(msg.appId);
           this.removeLaunchingApp(msg.appId)
           this.addRunningApp(msg.appId);
+          if (wasLaunching) {
+            const name = this.getAppById(msg.appId)?.name ?? 'App';
+            this.notificationService.showSuccess(`${name} launched successfully`);
+          }
         }
         break;
       case 'app-stopped':
-        if (msg.appId) this.removeRunningApp(msg.appId);
+        if (msg.appId) {
+          const wasRunning = this.isAppRunning(msg.appId);
+          this.removeRunningApp(msg.appId);
+          if (wasRunning) {
+            const name = this.getAppById(msg.appId)?.name ?? 'App';
+            this.notificationService.showSuccess(`${name} stopped successfully`);
+          }
+        }
         break;
       case 'running-apps':
         this.runningApps.set([]);
@@ -256,6 +268,7 @@ export class AppService {
 
 
   installAppVersion(id: string, targetVersion: string, targetOS: string): Observable<OperationResult> {
+    const appName = this.getAppById(id)?.name ?? 'App';
     return this.http.get<OperationResult>(
       `${this.apiBaseUrl}/install-app/${id}/${targetVersion}`,
       {}
@@ -266,6 +279,11 @@ export class AppService {
         const index = currentApps.findIndex(a => String(a.id) === String(id));
         if(index>=0)
           this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
+        this.notificationService.showSuccess(`${appName} installed successfully`);
+      }),
+      catchError((error: unknown) => {
+        this.notificationService.showError(`Failed to install ${appName}`);
+        throw error;
       })
     );
   }
@@ -273,6 +291,7 @@ export class AppService {
   
 
   updateAppToVersion(id: string, targetVersion: string): Observable<OperationResult> {
+    const appName = this.getAppById(id)?.name ?? 'App';
     return this.http.get<OperationResult>(
       `${this.apiBaseUrl}/update-app/${id}/${targetVersion}`,
       {}
@@ -283,6 +302,11 @@ export class AppService {
         const index = currentApps.findIndex(a => String(a.id) === String(id));
         if(index>=0)
           this.updateAppInCache(id, { status: this.getAppStatus(targetVersion,currentApps[index].latestVersion), installedVersion: targetVersion });
+        this.notificationService.showSuccess(`${appName} updated successfully`);
+      }),
+      catchError((error: unknown) => {
+        this.notificationService.showError(`Failed to update ${appName}`);
+        throw error;
       })
     );
   }
@@ -291,6 +315,7 @@ export class AppService {
   
 
   uninstallApp(id: string): Observable<OperationResult> {
+    const appName = this.getAppById(id)?.name ?? 'App';
     return this.http.get<OperationResult>(
       `${this.apiBaseUrl}/uninstall-app/${id}`,
       {}
@@ -300,7 +325,12 @@ export class AppService {
           throw Error("Http response isn't successful")
         }
         this.updateAppInCache(id,{status:AppStatus.NotInstalled,installedVersion:null})
+        this.notificationService.showSuccess(`${appName} uninstalled successfully`);
       }),
+      catchError((error: unknown) => {
+        this.notificationService.showError(`Failed to uninstall ${appName}`);
+        throw error;
+      })
     );
   }
 

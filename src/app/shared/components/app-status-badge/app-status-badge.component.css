@@ -25,3 +25,8 @@
   color: white;
 }
 
+.badge-not-installed {
+  background-color: #9ca3af;
+  color: white;
+}
+

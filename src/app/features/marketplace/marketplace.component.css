@@ -1,5 +1,8 @@
 .marketplace-container {
-  width: 100%;
+  width: calc(100% + 1.5rem);
+  max-width: none;
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
 }
 .marketplace-header {
   display: flex;
@@ -66,12 +69,14 @@
 
 .marketplace-filters {
   margin-bottom: 2rem;
+  padding-right: 0;
 }
 
 .filter-buttons {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .filter-btn {
@@ -102,8 +107,9 @@
 }
 
 .apps-container.grid-view {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  justify-items: stretch;
 }
 
 .apps-container.list-view {
@@ -125,8 +131,8 @@
 
 .skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .skeleton-card {
@@ -225,6 +231,13 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+@media (max-width: 1100px) {
+  .skeleton-grid,
+  .apps-container.grid-view {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {

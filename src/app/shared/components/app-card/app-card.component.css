@@ -174,3 +174,43 @@
   user-select: none;
   cursor: default;
 }
+
+:host-context(.list-view) .app-card {
+  min-height: unset;
+}
+
+:host-context(.list-view) .card-content {
+  padding: 0.875rem 1rem;
+}
+
+:host-context(.list-view) .card-top {
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+:host-context(.list-view) .card-name {
+  font-size: 1.125rem !important;
+}
+
+:host-context(.list-view) .card-description {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin: 0 0 0.5rem 0;
+  -webkit-line-clamp: 2;
+}
+
+:host-context(.list-view) .card-divider {
+  margin-bottom: 0.5rem;
+}
+
+:host-context(.list-view) .card-info-row {
+  margin-bottom: 0.25rem;
+}
+
+:host-context(.list-view) .card-installed-row {
+  margin-bottom: 0.5rem;
+}
+
+:host-context(.list-view) .card-details-link {
+  font-size: 0.8rem;
+}
