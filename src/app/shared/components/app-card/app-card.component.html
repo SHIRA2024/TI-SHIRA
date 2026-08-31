@@ -1,23 +1,27 @@
 <div class="app-card">
   <div class="card-content">
+    <div class="card-status-corner">
+      <app-status-badge [status]="app().status" />
+    </div>
+
     <div class="card-top">
       <app-logo [iconUrl]="app().iconUrl" [name]="app().name" [size]="80" />
       <div class="card-name-area">
-        <h3 #cardName class="card-name" [class.scroll]="hasOverflow" [style.--scroll-distance.px]="scrollDistance">{{ app().name }}</h3>
+        <h3 class="card-name">{{ app().name }}</h3>
       </div>
     </div>
     <p class="card-description">{{ app().description }}</p>
 
     <div class="card-divider"></div>
 
-    <div class="card-info-row">
-      <app-status-badge [status]="app().status" />
-      <span class="card-version">Latest: {{ app().latestVersion }}</span>
-    </div>
-
     <div class="card-installed-row">
       <span class="card-installed-label">Installed:</span>
       <span class="card-installed-value">{{ app().installedVersion ?? 'None' }}</span>
+    </div>
+
+    <div class="card-latest-row">
+      <span class="card-installed-label">Latest:</span>
+      <span class="card-installed-value">{{ app().latestVersion }}</span>
     </div>
 
     <a [routerLink]="['/app', app().id]" class="card-details-link">

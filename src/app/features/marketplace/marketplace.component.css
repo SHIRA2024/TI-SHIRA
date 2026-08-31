@@ -7,8 +7,9 @@
 .marketplace-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
+  align-items: center;
+  /* Matches .navbar-main padding-top so the gaps above and below the heading are equal */
+  margin-bottom: 1.5rem;
   gap: 2rem;
   cursor: default;
   user-select: none;
@@ -18,7 +19,7 @@
   font-size: 2rem;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 0.5rem 0;
+  margin: 0;
   cursor: default;
   user-select: none;
 }
